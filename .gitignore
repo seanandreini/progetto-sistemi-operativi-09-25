@@ -1,6 +1,10 @@
 #vscode folder
 .vscode/
 
+#eseguibii
+server
+client
+
 # Prerequisites
 *.d
 
