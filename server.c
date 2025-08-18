@@ -7,7 +7,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
-//aa
+
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
 
