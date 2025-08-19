@@ -1,4 +1,9 @@
-all: client server
+MAKEFLAGS += -j
+
+all: exec
+
+exec:
+	./client & ./server
 
 client: client.c
 	gcc -o client client.c
