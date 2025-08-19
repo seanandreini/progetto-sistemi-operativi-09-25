@@ -1,15 +1,12 @@
-all: exec
-
-exec: client server
-	./client ./server
+all: client server
 
 client: client.c
-	gcc -c -o client client.c
+	gcc -o client client.c
 	chmod +x client
 
 server: server.c
-	gcc -c -o server server.c
+	gcc -o server server.c
 	chmod +x server
 
 clean:
-	rm -f *.o main
+	rm -f *.o main client server
