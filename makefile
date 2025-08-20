@@ -10,7 +10,7 @@ server: server.c cJSON.o
 	@gcc -o server server.c cJSON.o
 
 cJSON.o: cJSON.c
-	@echo "Compiling utilities..."
+	@echo "Compiling cJSON library..."
 	@gcc -c cJSON.c
 
 clean:
