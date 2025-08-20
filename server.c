@@ -12,6 +12,20 @@
 #define SERVER_ADDRESS "127.0.0.1"
 
 
+//! RICORDA DI VEDERE DIMENSIONE ARRAY LETTURA
+
+// read until null terminator
+int readLine(int fd, char *string) {
+  int bytesRead;
+
+  do{
+    bytesRead = read(fd, string, 1);
+  }
+  while(bytesRead>0 && *string++ != '\0');
+
+  return bytesRead;
+}
+
 int main(int argc, char *argv[]){
   
   int socketfd, clientfd;
@@ -58,9 +72,10 @@ int main(int argc, char *argv[]){
     else {
       printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
       
-      char buffer[2];
-      read(clientfd, buffer, 2);
-      printf("Received from client: %s", buffer);
+      //lettura messaggio dal client e stampa
+      char string[256];
+      readLine(clientfd, string);
+      printf("Received from client: %s", string);
 
       close(clientfd);
     }

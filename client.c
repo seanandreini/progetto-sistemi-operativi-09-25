@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <string.h>
 
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
@@ -34,7 +35,9 @@ int main(int argc, char *argv[]){
   } while (resultCode == -1);
 
   printf("Connected to server at %s:%d\n", SERVER_ADDRESS, SERVER_PORT);
-  write(clientfd, "a\n", 2);
+
+  char *message = "Il Bertini è in vacanza\n";
+  write(clientfd, message, strlen(message)+1); // +1 to include \0
   printf("Sent to server: Hello from client!\n");  
 
   // close socket
