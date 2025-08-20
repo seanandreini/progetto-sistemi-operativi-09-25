@@ -1,19 +1,17 @@
-# MAKEFLAGS += -j
-
-# all: exec
 all: client server
 	@echo "Compiled successfully."
 
-exec:
-	./client & ./server
-
-client: client.c
+client: client.c cJSON.o
 	@echo "Compiling client..."
-	@gcc -o client client.c
+	@gcc -o client client.c cJSON.o
 
-server: server.c
+server: server.c cJSON.o
 	@echo "Compiling server..."
-	@gcc -o server server.c
+	@gcc -o server server.c cJSON.o
+
+cJSON.o: cJSON.c
+	@echo "Compiling utilities..."
+	@gcc -c cJSON.c
 
 clean:
 	rm -f *.o main client server
