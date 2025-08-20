@@ -27,12 +27,43 @@ int readLine(int fd, char *string) {
 
   return bytesRead;
 }
+/*
+void pulisci_buffer_input() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}*/
+
+ticket creaTicket() {
+  ticket t;
+  printf("Inserisci i dati del ticket:\n");
+  printf("Titolo:\n");
+  fgets(t.title, sizeof(t.title), stdin); 
+  printf("descrizione:\n");
+  fgets(t.description, sizeof(t.description), stdin);
+  printf("Data (gg/mm/aaaa):\n");
+  scanf("%d/%d/%d", &t.date.giorno, &t.date.mese, &t.date.anno);
+  int temp_priority;
+  printf("Priorità (1: Bassa, 2: Media, 3: Alta):\n");
+  scanf("%d", &temp_priority);
+  t.priority = temp_priority; 
+  int temp_state;
+  printf("Stato (1: Aperto, 2: In Corso, 3: Chiuso):\n");
+  scanf("%d", &temp_state);
+  t.state = temp_state;
+  //Dati agente non inseriti da tastiera, client non deve scegliere l'agente
+  return t;
+  //alcune cose forse dovrebbe inserirle il server, oltre all'id del ticket
+  //gemini dice di pulire il buffer dopo scanf per rimuovere l'\n rimasto che altrimenti fgets si ferma subito. 
+  //controllare anche inout enum, ho inserito 4 e non h adato errore, come ci si comporta in questo caso?
+}
 
 int main(int argc, char *argv[]){
-  
+  printf("Client started.\n");
   int clientfd, resultCode;
   struct sockaddr_in serverAddress;
-
+  printf("Creo ticket asoe");
+  ticket t = creaTicket();
+  printf("Ticket creato: %d, %s, %s\n", t.id, t.title, t.description);
   // create socket
   clientfd = socket(AF_INET, SOCK_STREAM, 0);
 
