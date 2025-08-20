@@ -12,6 +12,21 @@
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
 
+
+//TODO: struttura per ticket
+
+// read until null terminator
+int readLine(int fd, char *string) {
+  int bytesRead;
+
+  do{
+    bytesRead = read(fd, string, 1);
+  }
+  while(bytesRead>0 && *string++ != '\0');
+
+  return bytesRead;
+}
+
 int main(int argc, char *argv[]){
   
   int clientfd, resultCode;
@@ -36,6 +51,7 @@ int main(int argc, char *argv[]){
 
   printf("Connected to server at %s:%d\n", SERVER_ADDRESS, SERVER_PORT);
 
+  //TODO: scrittura ticket (IN JSON)
   char *message = "Il Bertini è in vacanza\n";
   write(clientfd, message, strlen(message)+1); // +1 to include \0
   printf("Sent to server: Hello from client!\n");  

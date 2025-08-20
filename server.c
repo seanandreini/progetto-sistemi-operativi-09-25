@@ -72,6 +72,8 @@ int main(int argc, char *argv[]){
     else {
       printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
       
+      //TODO: gestire più client contemporaneamente (con fork o thread)
+
       //lettura messaggio dal client e stampa
       char string[256];
       readLine(clientfd, string);
