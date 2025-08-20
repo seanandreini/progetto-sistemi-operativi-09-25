@@ -32,6 +32,8 @@ int main(int argc, char *argv[]){
   socklen_t clientAddressSize;
   struct sockaddr_in serverAddress, clientAddress;
 
+  signal(SIGCHLD, SIG_IGN); // anti zombie handler
+
   // creazione socket
   if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     perror("Error creating socket");
@@ -70,16 +72,25 @@ int main(int argc, char *argv[]){
       close(socketfd);
     }
     else {
-      printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
-      
-      //TODO: gestire più client contemporaneamente (con fork o thread)
+      pid_t pid = fork();
+      if(pid != 0) {
+        // parent process
+        close(clientfd); // close the client socket
+      }
+      else {
+        // child process
+        close(socketfd); // close the listening socket
 
-      //lettura messaggio dal client e stampa
-      char string[256];
-      readLine(clientfd, string);
-      printf("Received from client: %s", string);
-
-      close(clientfd);
+        printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
+        
+        //lettura messaggio dal client e stampa
+        char string[256];
+        readLine(clientfd, string);
+        printf("Received from client n.%d: %s", clientfd, string);
+  
+        close(clientfd);
+        exit(0); // terminate child process
+      }
     }
   }
   

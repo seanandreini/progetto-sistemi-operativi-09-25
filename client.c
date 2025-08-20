@@ -57,6 +57,10 @@ int main(int argc, char *argv[]){
   write(clientfd, message, strlen(message)+1); // +1 to include \0
   printf("Sent to server: Hello from client!\n");  
 
+  //! TESTING MULTIPLE CONNECTIONS, DELETE LATER
+  sleep(10);
+
+
   // close socket
   close(clientfd);
   printf("Connection closed.\n");
