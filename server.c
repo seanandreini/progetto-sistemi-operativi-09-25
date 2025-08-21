@@ -7,6 +7,9 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "cJSON.h"
+#include "jsonParser.h"
+#include "functions.h"
 
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
@@ -14,17 +17,6 @@
 
 //! RICORDA DI VEDERE DIMENSIONE ARRAY LETTURA
 
-// read until null terminator
-int readLine(int fd, char *string) {
-  int bytesRead;
-
-  do{
-    bytesRead = read(fd, string, 1);
-  }
-  while(bytesRead>0 && *string++ != '\0');
-
-  return bytesRead;
-}
 
 int main(int argc, char *argv[]){
   
@@ -86,7 +78,24 @@ int main(int argc, char *argv[]){
         //lettura messaggio dal client e stampa
         char string[256]= {0};
         readLine(clientfd, string);
-        printf("Received from client n.%d: %s", clientfd, string);
+        // printf("Received from client n.%d: %s", clientfd, string);
+
+        // parsing string to struct
+        cJSON *jsonTicket = cJSON_Parse(string);
+        Ticket ticket;
+        parseJSONToTicket(jsonTicket, &ticket);
+
+        // il server deve:
+        // 1. assegnare un ID unico al ticket
+        // 2. assegnare un agente al ticket
+        // 3. inviare al client il numero del ticket
+        // 4. salvare su file il ticket
+
+
+
+
+
+
   
         close(clientfd);
         exit(0); // terminate child process

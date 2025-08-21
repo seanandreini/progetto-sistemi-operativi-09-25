@@ -1,0 +1,1 @@
+int readLine(int fd, char *string);

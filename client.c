@@ -11,21 +11,12 @@
 #include "ticket.h"
 #include "cJSON.h"
 #include "jsonParser.h"
+#include "functions.h"
 
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
 
-// read until null terminator
-int readLine(int fd, char *string) {
-  int bytesRead;
 
-  do{
-    bytesRead = read(fd, string, 1);
-  }
-  while(bytesRead>0 && *string++ != '\0');
-
-  return bytesRead;
-}
 /*
 void pulisci_buffer_input() {
     int c;
