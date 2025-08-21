@@ -18,11 +18,16 @@
 //! RICORDA DI VEDERE DIMENSIONE ARRAY LETTURA
 
 
+void loadTicketList(cJSON *ticketList){
+  
+}
+
 int main(int argc, char *argv[]){
   
   int socketfd, clientfd;
   socklen_t clientAddressSize;
   struct sockaddr_in serverAddress, clientAddress;
+  cJSON *ticketList = NULL;
 
   signal(SIGCHLD, SIG_IGN); // anti zombie handler
 
