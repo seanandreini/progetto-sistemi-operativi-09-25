@@ -77,7 +77,7 @@ int main(int argc, char *argv[]){
 
   //* ------------------------------
   Ticket ticket;
-  strncpy(ticket.title, "Test Ticket", strlen("Test Ticket"));
+  strncpy(ticket.title, "Ticket 3", strlen("Ticket 3"));
   strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
   
   ticket.date.giorno = 1;
@@ -111,8 +111,8 @@ int main(int argc, char *argv[]){
   //TODO: scrittura ticket (IN JSON)
   cJSON *jsonTicket = parseTicketToJSON(&ticket);
   char *jsonString = cJSON_Print(jsonTicket);
-  // write(clientfd, jsonString, strlen(jsonString));
-  write(clientfd, "ciao", 4);
+  write(clientfd, jsonString, strlen(jsonString));
+  // write(clientfd, "ciao", 4);
   printf("Ticket sent to server.\n");
 
 

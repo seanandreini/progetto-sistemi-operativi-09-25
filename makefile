@@ -7,7 +7,7 @@ client: src/client.c jsonParser.o cJSON.o functions.o
 
 server: src/server.c jsonParser.o cJSON.o functions.o
 	@echo "Compiling server..."
-	@gcc -o build/server src/server.c build/jsonParser.o build/cJSON.o build/functions.o
+	@gcc -o bin/server src/server.c build/jsonParser.o build/cJSON.o build/functions.o
 
 cJSON.o: lib/cJSON/cJSON.c
 	@echo "Compiling cJSON library..."

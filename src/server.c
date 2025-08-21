@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
 #include "../include/functions.h"
@@ -18,16 +19,43 @@
 //! RICORDA DI VEDERE DIMENSIONE ARRAY LETTURA
 
 
-void loadTicketList(cJSON *ticketList){
-  
+void loadTicketList(cJSON **ticketList){
+  FILE *file = fopen("./data/ticketList.json", "r");
+  if(file != NULL){
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char *fileContent = malloc(fileSize + 1);
+    fileContent[fileSize] = '\0';
+
+    fread(fileContent, 1, fileSize, file);
+
+    *ticketList = cJSON_Parse(fileContent);
+    free(fileContent);
+  }
+  fclose(file);
 }
+
+void saveTicketList(cJSON *ticketList){
+  FILE *file = fopen("./data/ticketList.json", "w");
+
+  char *jsonString = cJSON_Print(ticketList);
+  fwrite(jsonString, sizeof(char), strlen(jsonString), file);
+
+  fclose(file);
+  free(jsonString);
+}
+
 
 int main(int argc, char *argv[]){
   
   int socketfd, clientfd;
   socklen_t clientAddressSize;
   struct sockaddr_in serverAddress, clientAddress;
-  cJSON *ticketList = NULL;
+  cJSON *ticketList = cJSON_CreateArray();;
+
+  loadTicketList(&ticketList); // loading existing tickets
 
   signal(SIGCHLD, SIG_IGN); // anti zombie handler
 
@@ -83,12 +111,21 @@ int main(int argc, char *argv[]){
         //lettura messaggio dal client e stampa
         char string[256]= {0};
         readLine(clientfd, string);
-        // printf("Received from client n.%d: %s", clientfd, string);
+        printf("Received from client n.%d: %s", clientfd, string);
 
         // parsing string to struct
+        //* CREAZIONE TICKET
         cJSON *jsonTicket = cJSON_Parse(string);
         Ticket ticket;
         parseJSONToTicket(jsonTicket, &ticket);
+
+        cJSON_AddItemToArray(ticketList, jsonTicket);
+        saveTicketList(ticketList);
+
+        printf("Ticket saved.\n");
+
+
+
 
         // il server deve:
         // 1. assegnare un ID unico al ticket
