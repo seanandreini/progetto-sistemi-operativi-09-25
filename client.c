@@ -35,26 +35,44 @@ void pulisci_buffer_input() {
 
 ticket creaTicket() {
   ticket t;
+  int goodInput = 0;
+
   printf("Inserisci i dati del ticket:\n");
   printf("Titolo:\n");
   fgets(t.title, sizeof(t.title), stdin); 
   printf("descrizione:\n");
   fgets(t.description, sizeof(t.description), stdin);
+
+  //TODO: inserire logica controllo data
   printf("Data (gg/mm/aaaa):\n");
   scanf("%d/%d/%d", &t.date.giorno, &t.date.mese, &t.date.anno);
-  int temp_priority;
-  printf("Priorità (1: Bassa, 2: Media, 3: Alta):\n");
-  scanf("%d", &temp_priority);
-  t.priority = temp_priority; 
-  int temp_state;
-  printf("Stato (1: Aperto, 2: In Corso, 3: Chiuso):\n");
-  scanf("%d", &temp_state);
-  t.state = temp_state;
-  //Dati agente non inseriti da tastiera, client non deve scegliere l'agente
+
+  while(!goodInput) {
+    int temp_priority;
+    printf("Priorità (1: Bassa, 2: Media, 3: Alta):\n");
+    scanf("%d", &temp_priority);
+    if (t.priority < MIN_PRIORITY || t.priority > MAX_PRIORITY) {
+      printf("Priorità non valida, riprova.\n");
+      continue;
+    }
+    goodInput = 1;
+    t.priority = temp_priority; 
+  }
+
+  goodInput = 0;
+  while(!goodInput) {
+    int temp_state;
+    printf("Stato (1: Aperto, 2: In Corso, 3: Chiuso):\n");
+    scanf("%d", &temp_state);
+    if(temp_state < MIN_STATE || temp_state > MAX_STATE){
+      printf("Stato non valido, riprova.\n");
+      continue;
+    }
+    goodInput = 1;
+    t.state = temp_state;
+  }
+
   return t;
-  //alcune cose forse dovrebbe inserirle il server, oltre all'id del ticket
-  //gemini dice di pulire il buffer dopo scanf per rimuovere l'\n rimasto che altrimenti fgets si ferma subito. 
-  //controllare anche inout enum, ho inserito 4 e non h adato errore, come ci si comporta in questo caso?
 }
 
 int main(int argc, char *argv[]){
