@@ -33,8 +33,8 @@ void pulisci_buffer_input() {
     while ((c = getchar()) != '\n' && c != EOF);
 }*/
 
-ticket creaTicket() {
-  ticket t;
+Ticket creaTicket() {
+  Ticket t;
   int goodInput = 0;
 
   printf("Inserisci i dati del ticket:\n");
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]){
   int clientfd, resultCode;
   struct sockaddr_in serverAddress;
   printf("Creo ticket asoe");
-  ticket t = creaTicket();
+  Ticket t = creaTicket();
   printf("Ticket creato: %d, %s, %s\n", t.id, t.title, t.description);
   // create socket
   clientfd = socket(AF_INET, SOCK_STREAM, 0);

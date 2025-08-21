@@ -3,11 +3,11 @@
 
 #include "agent.h"
 
-typedef struct struct_data{
+typedef struct struct_date{
     int giorno;
     int mese;
     int anno;
-} data;
+} Date;
 
 typedef enum Priority{
     LOW = 1,
@@ -29,10 +29,10 @@ typedef struct struct_ticket{
     int id; // unique identifier for the ticket //!(scegliere come fare, il server dovrà generarlo)
     char title[50];
     char description[200];
-    data date;
+    Date date;
     Priority priority;
     State state;
-    agent agent;  
-} ticket;
+    Agent agent;  
+} Ticket;
 
 #endif 
