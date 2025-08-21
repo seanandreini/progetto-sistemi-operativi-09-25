@@ -84,7 +84,7 @@ int main(int argc, char *argv[]){
         printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
         
         //lettura messaggio dal client e stampa
-        char string[256];
+        char string[256]= {0};
         readLine(clientfd, string);
         printf("Received from client n.%d: %s", clientfd, string);
   

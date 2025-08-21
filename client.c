@@ -9,12 +9,11 @@
 #include <signal.h>
 #include <string.h>
 #include "ticket.h"
+#include "cJSON.h"
+#include "jsonParser.h"
 
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
-
-
-//TODO: struttura per ticket
 
 // read until null terminator
 int readLine(int fd, char *string) {
@@ -32,6 +31,8 @@ void pulisci_buffer_input() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 }*/
+
+//! USARE FGETS INVECE CHE SCANF O PULIRE IL BUFFER
 
 Ticket creaTicket() {
   Ticket t;
@@ -79,9 +80,24 @@ int main(int argc, char *argv[]){
   printf("Client started.\n");
   int clientfd, resultCode;
   struct sockaddr_in serverAddress;
-  printf("Creo ticket asoe");
-  Ticket t = creaTicket();
-  printf("Ticket creato: %d, %s, %s\n", t.id, t.title, t.description);
+  printf("Creo ticket...\n");
+  // Ticket ticket = creaTicket();
+
+
+  //* ------------------------------
+  Ticket ticket;
+  strncpy(ticket.title, "Test Ticket", strlen("Test Ticket"));
+  strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
+  
+  ticket.date.giorno = 1;
+  ticket.date.mese = 1;
+  ticket.date.anno = 2023;
+  ticket.priority = MEDIUM;
+  ticket.state = OPEN;
+  //* ------------------------------
+
+
+  printf("Ticket creato: %d, %s, %s\n", ticket.id, ticket.title, ticket.description);
   // create socket
   clientfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -102,12 +118,20 @@ int main(int argc, char *argv[]){
   printf("Connected to server at %s:%d\n", SERVER_ADDRESS, SERVER_PORT);
 
   //TODO: scrittura ticket (IN JSON)
-  char *message = "Il Bertini è in vacanza\n";
-  write(clientfd, message, strlen(message)+1); // +1 to include \0
-  printf("Sent to server: Hello from client!\n");  
+  cJSON *jsonTicket = parseTicketToJSON(&ticket);
+  char *jsonString = cJSON_Print(jsonTicket);
+  // write(clientfd, jsonString, strlen(jsonString));
+  write(clientfd, "ciao", 4);
+  printf("Ticket sent to server.\n");
 
-  //! TESTING MULTIPLE CONNECTIONS, DELETE LATER
-  sleep(10);
+
+
+
+
+
+
+  // //! TESTING MULTIPLE CONNECTIONS, DELETE LATER
+  // sleep(10);
 
 
   // close socket

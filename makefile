@@ -1,13 +1,13 @@
 all: client server
 	@echo "Compiled successfully."
 
-client: client.c jsonParser.o
+client: client.c jsonParser.o cJSON.o
 	@echo "Compiling client..."
-	@gcc -o client client.c cJSON.o
+	@gcc -o client client.c jsonParser.o cJSON.o
 
-server: server.c jsonParser.o
+server: server.c jsonParser.o cJSON.o
 	@echo "Compiling server..."
-	@gcc -o server server.c cJSON.o
+	@gcc -o server server.c jsonParser.o cJSON.o
 
 cJSON.o: cJSON.c
 	@echo "Compiling cJSON library..."
