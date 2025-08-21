@@ -1,25 +1,25 @@
 all: client server
 	@echo "Compiled successfully."
 
-client: client.c jsonParser.o cJSON.o functions.o
+client: src/client.c jsonParser.o cJSON.o functions.o
 	@echo "Compiling client..."
-	@gcc -o client client.c jsonParser.o cJSON.o functions.o
+	@gcc -o bin/client src/client.c build/jsonParser.o build/cJSON.o build/functions.o
 
-server: server.c jsonParser.o cJSON.o functions.o
+server: src/server.c jsonParser.o cJSON.o functions.o
 	@echo "Compiling server..."
-	@gcc -o server server.c jsonParser.o cJSON.o functions.o
+	@gcc -o build/server src/server.c build/jsonParser.o build/cJSON.o build/functions.o
 
-cJSON.o: cJSON.c
+cJSON.o: lib/cJSON/cJSON.c
 	@echo "Compiling cJSON library..."
-	@gcc -c cJSON.c
+	@gcc -c -o build/cJSON.o lib/cJSON/cJSON.c
 
-jsonParser.o: jsonParser.c cJSON.o
+jsonParser.o: src/jsonParser.c cJSON.o
 	@echo "Compiling JSON parser..."
-	@gcc -c jsonParser.c
+	@gcc -c -o build/jsonParser.o src/jsonParser.c
 
-functions.o: functions.c
+functions.o: src/functions.c
 	@echo "Compiling functions..."
-	@gcc -c functions.c
+	@gcc -c -o build/functions.o src/functions.c
 
 clean:
-	rm -f *.o main client server
+	rm -f build/*.o bin/client bin/server

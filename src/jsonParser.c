@@ -1,4 +1,4 @@
-#include "jsonParser.h"
+#include "../include/jsonParser.h"
 #include <string.h>
 
 cJSON *parseTicketToJSON(Ticket *ticket) {
@@ -35,7 +35,7 @@ cJSON *parseAgentToJSON(Agent *agent) {
   return jsonAgent;
 }
 
-void parseJSONToTicket(Ticket *ticket, cJSON *jsonTicket) {
+void parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
   ticket->id = cJSON_GetObjectItem(jsonTicket, "id")->valueint;
 
   //! SE PROBLEMI USARE MALLOC

@@ -7,9 +7,9 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "cJSON.h"
-#include "jsonParser.h"
-#include "functions.h"
+#include "../lib/cJSON/cJSON.h"
+#include "../include/jsonParser.h"
+#include "../include/functions.h"
 
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "cJSON.h"
+#include "./lib/cJSON/cJSON.h"
 
 
 int main(){
