@@ -10,7 +10,5 @@ int readMessage(int fd, char *string) {
   }
   while(bytesRead>0 && *string++ != '\0');
 
-  printf("Exited\n");
-
   return bytesRead;
 }

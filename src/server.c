@@ -166,15 +166,38 @@ int main(int argc, char *argv[]){
         readMessage(clientfd, message);
         // printf("Received from client n.%d: %s", clientfd, message);
 
-        // //* CREAZIONE TICKET
-        cJSON *ticket = cJSON_Parse(message);
-        int ticketId = getNextTicketId();
-        // printf("Assigning ticket ID: %d\n", ticketId);
-        cJSON_ReplaceItemInObject(ticket, "id", cJSON_CreateNumber(ticketId));
+        cJSON *jsonMessage = cJSON_Parse(message);
+        char *action = cJSON_GetObjectItem(jsonMessage, "ACTION")->valuestring;
+        cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "DATA");
 
+        if(strcmp(action, "CREATE_TICKET") == 0){
 
-        saveTicket(ticket);
-        printf("Ticket saved.\n");
+          //* CREAZIONE TICKET
+          int ticketId = getNextTicketId();
+          // printf("Assigning ticket ID: %d\n", ticketId);
+          cJSON_ReplaceItemInObject(jsonData, "id", cJSON_CreateNumber(ticketId));
+  
+  
+          saveTicket(jsonData);
+          printf("Ticket saved.\n");
+
+          jsonData = cJSON_CreateObject();
+          cJSON_AddStringToObject(jsonData, "ACTION", "MESSAGE");
+          
+          char *base = "Your ticket has been assigned ID: ";
+          int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
+          char *response = malloc(responseLength+1);
+          snprintf(response, responseLength+1, "%s%d", base, ticketId);
+
+          cJSON_AddStringToObject(jsonData, "DATA", response);
+          char *responseString = cJSON_PrintUnformatted(jsonData);
+
+          write(clientfd, responseString, strlen(responseString));
+
+          free(responseString);
+          free(response);
+        }
+
 
 
 

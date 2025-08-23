@@ -108,21 +108,32 @@ int main(int argc, char *argv[]){
 
   printf("Connected to server at %s:%d\n", SERVER_ADDRESS, SERVER_PORT);
 
-  //TODO: scrittura ticket (IN JSON)
-  cJSON *jsonTicket = parseTicketToJSON(&ticket);
-  char *jsonString = cJSON_Print(jsonTicket);
-  write(clientfd, jsonString, strlen(jsonString));
+
+
+  cJSON *jsonMessage = cJSON_CreateObject();
+  cJSON_AddStringToObject(jsonMessage, "ACTION", "CREATE_TICKET");
+  cJSON_AddItemToObject(jsonMessage, "DATA", parseTicketToJSON(&ticket));
+
+  char *message = cJSON_PrintUnformatted(jsonMessage);
+
+
+
+
+  write(clientfd, message, strlen(message));
   write(clientfd, "\0", 1); // null terminator
   printf("Ticket sent to server.\n");
 
+  char receivedMessage[256]= {0};
+  readMessage(clientfd, receivedMessage);
 
-
-
+  cJSON *jsonResponse = cJSON_Parse(receivedMessage);
+  char *data = cJSON_GetObjectItem(jsonResponse, "DATA")->valuestring;
+  printf("%s\n", data);
 
 
 
   //! TESTING MULTIPLE CONNECTIONS, DELETE LATER
-  sleep(10);
+  // sleep(10);
 
 
   // close socket
