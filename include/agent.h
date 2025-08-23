@@ -7,3 +7,7 @@ typedef struct struct_agent{
 } Agent;
 
 #endif 
+
+//creo a mano gli agenti
+//funzioni per il parse del file json
+//funzione che assegna ticket ad agente sul server (logica si farà più avanti)
