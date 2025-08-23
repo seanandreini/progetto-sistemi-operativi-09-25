@@ -1,1 +1,1 @@
-int readLine(int fd, char *string);
+int readMessage(int fd, char *string);

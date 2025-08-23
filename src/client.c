@@ -77,7 +77,7 @@ int main(int argc, char *argv[]){
 
   //* ------------------------------
   Ticket ticket;
-  strncpy(ticket.title, "Ticket 3", strlen("Ticket 3"));
+  strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
   strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
   
   ticket.date.giorno = 1;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
   cJSON *jsonTicket = parseTicketToJSON(&ticket);
   char *jsonString = cJSON_Print(jsonTicket);
   write(clientfd, jsonString, strlen(jsonString));
-  // write(clientfd, "ciao", 4);
+  write(clientfd, "\0", 1); // null terminator
   printf("Ticket sent to server.\n");
 
 
@@ -121,8 +121,8 @@ int main(int argc, char *argv[]){
 
 
 
-  // //! TESTING MULTIPLE CONNECTIONS, DELETE LATER
-  // sleep(10);
+  //! TESTING MULTIPLE CONNECTIONS, DELETE LATER
+  sleep(10);
 
 
   // close socket

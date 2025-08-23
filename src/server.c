@@ -163,32 +163,25 @@ int main(int argc, char *argv[]){
         
         //lettura messaggio dal client e stampa
         char message[256]= {0};
-        readLine(clientfd, message);
-        // printf("Received from client n.%d: %s", clientfd, string);
+        readMessage(clientfd, message);
+        // printf("Received from client n.%d: %s", clientfd, message);
 
-        // parsing string to struct
         // //* CREAZIONE TICKET
         cJSON *ticket = cJSON_Parse(message);
         int ticketId = getNextTicketId();
-        
-        
-        printf("Assigning ticket ID: %d\n", ticketId);
-
-
+        // printf("Assigning ticket ID: %d\n", ticketId);
         cJSON_ReplaceItemInObject(ticket, "id", cJSON_CreateNumber(ticketId));
 
 
         saveTicket(ticket);
         printf("Ticket saved.\n");
 
-        cJSON_Delete(ticket);
-        free(message);
 
 
 
 
         // il server deve:
-        // 1. assegnare un ID unico al ticket
+        //*FATTO 1. assegnare un ID unico al ticket 
         // 2. assegnare un agente al ticket
         // 3. inviare al client il numero del ticket
         // 4. salvare su file il ticket
