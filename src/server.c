@@ -94,6 +94,41 @@ int getNextTicketId(){
   return maxId+1;
 }
 
+char *handleMessage(char *message){
+  cJSON *jsonMessage = cJSON_Parse(message);
+  int actionCode = cJSON_GetObjectItem(jsonMessage, "ACTION_CODE")->valueint;
+  cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "DATA");
+
+  switch (actionCode)
+  {
+  case CREATE_TICKET_CODE:{
+    //* CREAZIONE TICKET
+    int ticketId = getNextTicketId();
+    cJSON_ReplaceItemInObject(jsonData, "id", cJSON_CreateNumber(ticketId));
+
+    saveTicket(jsonData);
+    printf("Ticket saved.\n");
+
+    jsonData = cJSON_CreateObject();
+    cJSON_AddNumberToObject(jsonData, "ACTION_CODE", MESSAGE_CODE);
+    
+    char *base = "Your ticket code is: ";
+    int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
+    char *response = malloc(responseLength+1);
+    snprintf(response, responseLength+1, "%s%d", base, ticketId);
+    cJSON_AddStringToObject(jsonData, "DATA", response);
+    char *responseString = cJSON_PrintUnformatted(jsonData);
+
+    free(response);
+    return responseString;
+  }
+  
+  default:
+    printf("ERROR: Invalid action_code.\n");
+    return "";
+  }
+}
+
 int main(int argc, char *argv[]){
   
   int socketfd, clientfd;
@@ -165,55 +200,9 @@ int main(int argc, char *argv[]){
         char message[256]= {0};
         readMessage(clientfd, message);
         // printf("Received from client n.%d: %s", clientfd, message);
-
-        cJSON *jsonMessage = cJSON_Parse(message);
-        int action = cJSON_GetObjectItem(jsonMessage, "ACTION_CODE")->valueint;
-        cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "DATA");
-
-        if(action == CREATE_TICKET_CODE){
-
-          //* CREAZIONE TICKET
-          int ticketId = getNextTicketId();
-          // printf("Assigning ticket ID: %d\n", ticketId);
-          cJSON_ReplaceItemInObject(jsonData, "id", cJSON_CreateNumber(ticketId));
-  
-  
-          saveTicket(jsonData);
-          printf("Ticket saved.\n");
-
-          jsonData = cJSON_CreateObject();
-          cJSON_AddNumberToObject(jsonData, "ACTION_CODE", MESSAGE_CODE);
-          
-          char *base = "Your ticket has been assigned ID: ";
-          int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
-          char *response = malloc(responseLength+1);
-          snprintf(response, responseLength+1, "%s%d", base, ticketId);
-
-          cJSON_AddStringToObject(jsonData, "DATA", response);
-          char *responseString = cJSON_PrintUnformatted(jsonData);
-
-          write(clientfd, responseString, strlen(responseString));
-
-          free(responseString);
-          free(response);
-        }
-
-
-
-
-
-
-        // il server deve:
-        //*FATTO 1. assegnare un ID unico al ticket 
-        // 2. assegnare un agente al ticket
-        // 3. inviare al client il numero del ticket
-        // 4. salvare su file il ticket
-
-
-
-
-
-
+        
+        char *responseString = handleMessage(message);
+        write(clientfd, responseString, strlen(responseString));
   
         close(clientfd);
         printf("Connection closed.\n");

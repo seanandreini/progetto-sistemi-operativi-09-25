@@ -2,4 +2,3 @@
 #define MESSAGE_CODE 1
 
 int readMessage(int fd, char *string);
-void handleMessage(char *message);
