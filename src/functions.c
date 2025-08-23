@@ -1,5 +1,5 @@
 #include <unistd.h>
-#include <stdio.h>
+#include "../lib/cJSON/cJSON.h"
 
 // read until null terminator
 int readMessage(int fd, char *string) {

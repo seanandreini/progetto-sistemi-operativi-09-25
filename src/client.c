@@ -25,7 +25,7 @@ void pulisci_buffer_input() {
 
 //! USARE FGETS INVECE CHE SCANF O PULIRE IL BUFFER
 
-Ticket creaTicket() {
+Ticket createTicket() {
   Ticket t;
   int goodInput = 0;
 
@@ -67,12 +67,34 @@ Ticket creaTicket() {
   return t;
 }
 
+// message interpretation
+void handleMessage(char *message){
+  cJSON *jsonMessage = cJSON_Parse(message);
+  int actionCode = cJSON_GetObjectItem(jsonMessage, "ACTION_CODE")->valueint;
+  cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "DATA");
+
+  switch (actionCode)
+  {
+  case MESSAGE_CODE:{
+    char *data = cJSON_Print(jsonData);
+    printf("Server: %s\n", jsonData->valuestring);
+    free(data);
+    break;
+  }
+  
+  default:{
+    printf("ERROR: Invalid action_code.\n");
+    break;
+  }
+  }
+}
+
 int main(int argc, char *argv[]){
   printf("Client started.\n");
   int clientfd, resultCode;
   struct sockaddr_in serverAddress;
   printf("Creo ticket...\n");
-  // Ticket ticket = creaTicket();
+  // Ticket ticket = createTicket();
 
 
   //* ------------------------------
@@ -111,7 +133,7 @@ int main(int argc, char *argv[]){
 
 
   cJSON *jsonMessage = cJSON_CreateObject();
-  cJSON_AddStringToObject(jsonMessage, "ACTION", "CREATE_TICKET");
+  cJSON_AddNumberToObject(jsonMessage, "ACTION_CODE", CREATE_TICKET_CODE);
   cJSON_AddItemToObject(jsonMessage, "DATA", parseTicketToJSON(&ticket));
 
   char *message = cJSON_PrintUnformatted(jsonMessage);
@@ -126,9 +148,7 @@ int main(int argc, char *argv[]){
   char receivedMessage[256]= {0};
   readMessage(clientfd, receivedMessage);
 
-  cJSON *jsonResponse = cJSON_Parse(receivedMessage);
-  char *data = cJSON_GetObjectItem(jsonResponse, "DATA")->valuestring;
-  printf("%s\n", data);
+  handleMessage(receivedMessage);
 
 
 

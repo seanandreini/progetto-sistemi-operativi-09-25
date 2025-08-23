@@ -167,10 +167,10 @@ int main(int argc, char *argv[]){
         // printf("Received from client n.%d: %s", clientfd, message);
 
         cJSON *jsonMessage = cJSON_Parse(message);
-        char *action = cJSON_GetObjectItem(jsonMessage, "ACTION")->valuestring;
+        int action = cJSON_GetObjectItem(jsonMessage, "ACTION_CODE")->valueint;
         cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "DATA");
 
-        if(strcmp(action, "CREATE_TICKET") == 0){
+        if(action == CREATE_TICKET_CODE){
 
           //* CREAZIONE TICKET
           int ticketId = getNextTicketId();
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]){
           printf("Ticket saved.\n");
 
           jsonData = cJSON_CreateObject();
-          cJSON_AddStringToObject(jsonData, "ACTION", "MESSAGE");
+          cJSON_AddNumberToObject(jsonData, "ACTION_CODE", MESSAGE_CODE);
           
           char *base = "Your ticket has been assigned ID: ";
           int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
