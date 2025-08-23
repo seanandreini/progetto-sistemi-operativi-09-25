@@ -3,11 +3,11 @@ all: client server
 
 client: src/client.c jsonParser.o cJSON.o functions.o
 	@echo "Compiling client..."
-	@gcc -o bin/client src/client.c build/jsonParser.o build/cJSON.o build/functions.o
+	@gcc -g -o bin/client src/client.c build/jsonParser.o build/cJSON.o build/functions.o
 
 server: src/server.c jsonParser.o cJSON.o functions.o
 	@echo "Compiling server..."
-	@gcc -o bin/server src/server.c build/jsonParser.o build/cJSON.o build/functions.o
+	@gcc -g -o bin/server src/server.c build/jsonParser.o build/cJSON.o build/functions.o
 
 cJSON.o: lib/cJSON/cJSON.c
 	@echo "Compiling cJSON library..."

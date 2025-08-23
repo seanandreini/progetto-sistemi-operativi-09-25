@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/mman.h>
+#include <sys/file.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -20,56 +21,93 @@
 //! RICORDA DI VEDERE DIMENSIONE ARRAY LETTURA
 
 
-void loadTicketList(char **shmTicketList){
-  FILE *file = fopen("./data/ticketList.json", "r");
+
+void saveTicket(cJSON *ticket){
+  FILE *file = fopen("./data/ticketList.json", "r+");
+  int fd = fileno(file);
+  flock(fd, LOCK_EX);
+
   if(file != NULL){
+    // printf("File exists.\n");
+
     fseek(file, 0, SEEK_END);
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    if(fileSize == 0) return;
+    cJSON *jsonTicketList;
+    if(fileSize != 0){
+      // printf("File is not empty.\n");
 
-    // ticketList = malloc(fileSize + 1);
-    *shmTicketList = mmap(NULL, fileSize+1, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    (*shmTicketList)[fileSize] = '\0';
+      char *fileContent = malloc(fileSize + 1);
+      fread(fileContent, 1, fileSize, file);
+      fileContent[fileSize] = '\0';
 
-    fread(*shmTicketList, 1, fileSize, file);
+      jsonTicketList = cJSON_Parse(fileContent);
+      free(fileContent);
+    }
+    else{
+      // printf("File is empty.\n");
 
-    
+      jsonTicketList = cJSON_CreateArray();
+    }
+
+    cJSON_AddItemToArray(jsonTicketList, ticket);
+    char *newContent = cJSON_Print(jsonTicketList);
+
+    ftruncate(fd, 0);
+    fseek(file, 0, SEEK_SET);
+    fwrite(newContent, 1, strlen(newContent), file);
+
+    free(newContent);
+    cJSON_Delete(jsonTicketList);
+
+    fclose(file);
   }
-  fclose(file);
 }
 
-// void saveTicketList(cJSON *shmTicketList){
-//   printf("Saving ticket list to file...\n");
-//   FILE *file = fopen("./data/ticketList.json", "w");
+int getNextTicketId(){
+  int maxId = 0;
+  FILE *file = fopen("./data/ticketList.json", "r");
+  flock(fileno(file), LOCK_SH);
 
-//   fwrite(shmTicketList, sizeof(char), strlen(shmTicketList), file);
-//   fclose(file);
-// }
+  fseek(file, 0, SEEK_END);
+  long fileSize = ftell(file);
+  fseek(file, 0, SEEK_SET);
+  char *fileContent = malloc(fileSize + 1);
+  fread(fileContent, 1, fileSize, file);
+  fileContent[fileSize] = '\0';
 
-// int getNextTicketId(cJSON *ticketList){
-//   int maxId = 0;
-//   cJSON *ticket = NULL;
+  cJSON *jsonTicketList = cJSON_Parse(fileContent);
+  cJSON *ticket = cJSON_CreateArray();
 
-//   cJSON_ArrayForEach(ticket, ticketList){
-//     int currentId = cJSON_GetObjectItem(ticket, "id")->valueint;
-//     if(currentId > maxId) maxId = currentId;
-//   }
+  cJSON_ArrayForEach(ticket, jsonTicketList){
+    int currentId = cJSON_GetObjectItem(ticket, "id")->valueint;
+    if(currentId > maxId) maxId = currentId;
+  }
 
-//   return maxId+1;
-// }
+  free(fileContent);
+  cJSON_Delete(ticket);
+  cJSON_Delete(jsonTicketList);
+
+  fclose(file);
+
+  return maxId+1;
+}
 
 int main(int argc, char *argv[]){
   
   int socketfd, clientfd;
   socklen_t clientAddressSize;
   struct sockaddr_in serverAddress, clientAddress;
-  char *shmTicketList = NULL;
 
-  loadTicketList(&shmTicketList); // loading existing tickets
+  // creates file if it doesn't exist
+  FILE *file = fopen("./data/ticketList.json", "a");
+  fclose(file);
+  // char *shmTicketList = "[]";
 
-  printf("Loaded ticket list: %s\n", shmTicketList);
+  // printf("Array: %s\n", cJSON_Print(cJSON_Parse(shmTicketList)));
+
+  // loadTicketList(&shmTicketList); // loading existing tickets
 
   signal(SIGCHLD, SIG_IGN); // anti zombie handler
 
@@ -101,8 +139,6 @@ int main(int argc, char *argv[]){
 
   printf("Server is listening on port %d\n", SERVER_PORT);
 
-  
-
   // accept incoming connections
   while(1){
     clientAddressSize = sizeof(clientAddress);
@@ -111,8 +147,11 @@ int main(int argc, char *argv[]){
       close(socketfd);
     }
     else {
-      pid_t pid = fork();
-      if(pid != 0) {
+
+
+
+
+      if(fork() != 0) {
         // parent process
         close(clientfd); // close the client socket
       }
@@ -123,21 +162,27 @@ int main(int argc, char *argv[]){
         printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
         
         //lettura messaggio dal client e stampa
-        char string[256]= {0};
-        readLine(clientfd, string);
+        char message[256]= {0};
+        readLine(clientfd, message);
         // printf("Received from client n.%d: %s", clientfd, string);
 
         // parsing string to struct
         // //* CREAZIONE TICKET
-        // cJSON *jsonTicket = cJSON_Parse(string);
-        // cJSON_ReplaceItemInObject(jsonTicket, "id", cJSON_CreateNumber(getNextTicketId(ticketList)));
-        // printf("Ticket ID assigned: number %d.\n", cJSON_GetObjectItem(jsonTicket, "id")->valueint);
+        cJSON *ticket = cJSON_Parse(message);
+        int ticketId = getNextTicketId();
         
-        // cJSON_AddItemToArray(ticketList, jsonTicket);
+        
+        printf("Assigning ticket ID: %d\n", ticketId);
 
-        // saveTicketList(ticketList);
 
-        // printf("Ticket saved.\n");
+        cJSON_ReplaceItemInObject(ticket, "id", cJSON_CreateNumber(ticketId));
+
+
+        saveTicket(ticket);
+        printf("Ticket saved.\n");
+
+        cJSON_Delete(ticket);
+        free(message);
 
 
 
@@ -161,5 +206,6 @@ int main(int argc, char *argv[]){
     }
   }
   
+
   return 0;
 }
