@@ -67,9 +67,15 @@ Ticket createTicket() {
   return t;
 }
 
+
 // message interpretation
 void handleMessage(char *message){
   cJSON *jsonMessage = cJSON_Parse(message);
+  if(jsonMessage==NULL){
+    printf("No response received.\n");
+    return;
+  }
+
   int actionCode = cJSON_GetObjectItem(jsonMessage, "ACTION_CODE")->valueint;
   cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "DATA");
 
@@ -97,7 +103,7 @@ int main(int argc, char *argv[]){
   // Ticket ticket = createTicket();
 
 
-  //* ------------------------------
+  //! ------------------------------
   Ticket ticket;
   strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
   strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
@@ -107,7 +113,7 @@ int main(int argc, char *argv[]){
   ticket.date.anno = 2023;
   ticket.priority = MEDIUM;
   ticket.state = OPEN;
-  //* ------------------------------
+  //! ------------------------------
 
 
   printf("Ticket creato: %d, %s, %s\n", ticket.id, ticket.title, ticket.description);
@@ -132,22 +138,34 @@ int main(int argc, char *argv[]){
 
 
 
+
+  //* CREAZIONE TICKET 
+  // cJSON *jsonMessage = cJSON_CreateObject();
+  // cJSON_AddNumberToObject(jsonMessage, "ACTION_CODE", CREATE_TICKET_CODE);
+  // cJSON_AddItemToObject(jsonMessage, "data", parseTicketToJSON(&ticket));
+  // char *message = cJSON_PrintUnformatted(jsonMessage);
+
+
+
   cJSON *jsonMessage = cJSON_CreateObject();
-  cJSON_AddNumberToObject(jsonMessage, "ACTION_CODE", CREATE_TICKET_CODE);
-  cJSON_AddItemToObject(jsonMessage, "DATA", parseTicketToJSON(&ticket));
+  cJSON_AddNumberToObject(jsonMessage, "ACTION_CODE", LOGIN_REQUEST);
+  cJSON *jsonData = cJSON_CreateObject();
+  cJSON_AddStringToObject(jsonData, "username", "sean");
+  cJSON_AddStringToObject(jsonData, "password", "password");
+  cJSON_AddItemToObject(jsonMessage, "data", jsonData);
+  char *message = cJSON_Print(jsonMessage);
 
-  char *message = cJSON_PrintUnformatted(jsonMessage);
-
-
-
-
+  //client writing
   write(clientfd, message, strlen(message));
-  write(clientfd, "\0", 1); // null terminator
+  write(clientfd, "\0", 1);
   printf("Ticket sent to server.\n");
 
+
+
+
+  // client receiving
   char receivedMessage[256]= {0};
   readMessage(clientfd, receivedMessage);
-
   handleMessage(receivedMessage);
 
 
