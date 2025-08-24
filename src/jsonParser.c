@@ -37,10 +37,11 @@ cJSON *parseAgentToJSON(Agent *agent) {
   return jsonAgent;
 }
 
-void parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
+short parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
+  if(jsonTicket==NULL) return 0;
+
   ticket->id = cJSON_GetObjectItem(jsonTicket, "id")->valueint;
 
-  //! SE PROBLEMI USARE MALLOC
   strncpy(ticket->title, cJSON_GetObjectItem(jsonTicket, "title")->valuestring, sizeof(ticket->title)-1);
   ticket->title[sizeof(ticket->title)-1] = '\0';
 
@@ -59,12 +60,15 @@ void parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
   ticket->agent.code = cJSON_GetObjectItem(jsonAgent, "code")->valueint;
   strncpy(ticket->agent.username, cJSON_GetObjectItem(jsonAgent, "username")->valuestring, sizeof(ticket->agent.username)-1);
   ticket->agent.username[sizeof(ticket->agent.username)-1] = '\0';
+
+  return 1;
 }
 
 cJSON *parseMessageToJSON(Message *message){
   cJSON *jsonMessage = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonMessage, "action_code", message->action_code);
   cJSON_AddItemToObject(jsonMessage, "data", message->data);
+  cJSON_AddStringToObject(jsonMessage, "session_token", message->session_token);
 
   return jsonMessage;
 }

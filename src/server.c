@@ -140,8 +140,11 @@ void handleMessage(int clientfd, char *stringMessage){
   
   case LOGIN_REQUEST_CODE:{
     LoginData loginData;
-    //! AGGIUNGI IF
-    parseJSONToLoginData(message.data, &loginData);
+    
+    if(!parseJSONToLoginData(message.data, &loginData)){
+      printf("ERROR: invalid json.\n");
+      break;
+    }
 
     FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
     int fd = fileno(file);

@@ -124,16 +124,16 @@ int main(int argc, char *argv[]){
 
 
   //* CREAZIONE TICKET 
-  Ticket ticket;
-  strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
-  strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
-  ticket.date.giorno = 1;
-  ticket.date.mese = 1;
-  ticket.date.anno = 2023;
-  ticket.priority = MEDIUM;
-  ticket.state = OPEN;
-  message.action_code = CREATE_TICKET_CODE;
-  message.data = parseTicketToJSON(&ticket);
+  // Ticket ticket;
+  // strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
+  // strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
+  // ticket.date.giorno = 1;
+  // ticket.date.mese = 1;
+  // ticket.date.anno = 2023;
+  // ticket.priority = MEDIUM;
+  // ticket.state = OPEN;
+  // message.action_code = CREATE_TICKET_CODE;
+  // message.data = parseTicketToJSON(&ticket);
 
 
   //* RICHIESTA LOGIN
@@ -150,8 +150,6 @@ int main(int argc, char *argv[]){
   write(clientfd, stringMessage, strlen(stringMessage));
   write(clientfd, "\0", 1);
   printf("Message sent to server.\n");
-
-
 
   // client receiving
   char receivedMessage[256]= {0};

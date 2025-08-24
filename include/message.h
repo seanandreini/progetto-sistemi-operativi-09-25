@@ -17,6 +17,7 @@ typedef struct struct_json_message
 {
   int action_code;
   cJSON *data;
+  char session_token[SESSION_TOKEN_LENGTH+1];
 } Message;
 
 typedef enum login_request_type{
