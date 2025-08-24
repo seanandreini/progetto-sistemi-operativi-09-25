@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
 #include "../include/functions.h"
@@ -17,13 +18,16 @@
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
 
+#define TICKET_FILE_ADDRESS "./data/ticketList.json"
+#define USERS_FILE_ADDRESS "./data/users.json"
+
 
 //! RICORDA DI VEDERE DIMENSIONE ARRAY LETTURA
 
 
 
 void saveTicket(cJSON *ticket){
-  FILE *file = fopen("./data/ticketList.json", "r+");
+  FILE *file = fopen(TICKET_FILE_ADDRESS, "r+");
   int fd = fileno(file);
   flock(fd, LOCK_EX);
 
@@ -67,7 +71,7 @@ void saveTicket(cJSON *ticket){
 
 int getNextTicketId(){
   int maxId = 0;
-  FILE *file = fopen("./data/ticketList.json", "r");
+  FILE *file = fopen(TICKET_FILE_ADDRESS, "r");
   flock(fileno(file), LOCK_SH);
 
   fseek(file, 0, SEEK_END);
@@ -94,97 +98,152 @@ int getNextTicketId(){
   return maxId+1;
 }
 
-cJSON *createJsonMessage(int code, char *data){
+cJSON *createJsonMessage(int code, cJSON *data){
   cJSON *jsonMessage = cJSON_CreateObject();
-  cJSON_AddNumberToObject(jsonMessage, "ACTION_CODE", code);
-  cJSON_AddStringToObject(jsonMessage, "data", data);
+  cJSON_AddNumberToObject(jsonMessage, "action_code", code);
+  cJSON_AddItemToObject(jsonMessage, "data", data);
   return jsonMessage;
 }
 
-char *handleMessage(char *message){
-  printf("%s", message);
-  cJSON *jsonMessage = cJSON_Parse(message);
-  int actionCode = cJSON_GetObjectItem(jsonMessage, "ACTION_CODE")->valueint;
-  cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "data");
+void handleMessage(int clientfd, char *stringMessage){
+  Message message;
+  if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
+    printf("ERROR: invalid JSON");
+    return;
+  }
 
-  switch (actionCode)
+  switch (message.action_code)
   {
   case CREATE_TICKET_CODE:{
     //* CREAZIONE TICKET
     int ticketId = getNextTicketId();
-    cJSON_ReplaceItemInObject(jsonData, "id", cJSON_CreateNumber(ticketId));
+    cJSON_ReplaceItemInObject(message.data, "id", cJSON_CreateNumber(ticketId));
 
-    saveTicket(jsonData);
+    saveTicket(message.data);
     printf("Ticket saved.\n");
 
     char *base = "Your ticket code is: ";
     int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
     char *response = malloc(responseLength+1);
     snprintf(response, responseLength+1, "%s%d", base, ticketId);
+
+    message.action_code = MESSAGE_CODE;
+    message.data = cJSON_CreateString(response);
     
-    jsonMessage = createJsonMessage(MESSAGE_CODE, response);
-    char *responseString = cJSON_PrintUnformatted(jsonMessage);
+    char *responseString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
 
     free(response);
-    return responseString;
+    write(clientfd, responseString, strlen(responseString));
+    write(clientfd, "\0", 1);
+    break;
   }
   
-  case LOGIN_REQUEST:{
-
+  case LOGIN_REQUEST_CODE:{
+    LoginData loginData;
+    //! AGGIUNGI IF
+    parseJSONToLoginData(message.data, &loginData);
     
+    printf("Login request with username: %s and password: %s.\n", loginData.username, loginData.password);
 
-    char *username = cJSON_GetObjectItem(jsonData, "username")->valuestring;
-    char *password = cJSON_GetObjectItem(jsonData, "password")->valuestring;
-    printf("Login request with username: %s and password: %s.\n", username, password);
-
-    FILE *file = fopen("./data/users.json", "r+");
-    flock(fileno(file), LOCK_SH);
+    FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
+    int fd = fileno(file);
+    flock(fd, LOCK_SH);
 
     fseek(file, 0, SEEK_END);
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
     char *fileContent = malloc(fileSize+1);
-    fread(fileContent, 1, fileSize, file);
 
+    
 
-    cJSON *users = cJSON_Parse(fileContent);
-    free(fileContent);
-    cJSON *user = NULL;
     short found = 0;
-    cJSON_ArrayForEach(user, users){
-      if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, username)==0){
-        found = 1;
-        break;
+    cJSON *users = NULL;
+    cJSON *user = NULL;
+    int index=-1;
+
+    if(fileSize!=0){
+      fread(fileContent, 1, fileSize, file);
+      users = cJSON_Parse(fileContent);
+      free(fileContent);
+      
+      cJSON_ArrayForEach(user, users){
+        // printf("USER: %d", strcmp(cJSON_GetObjectItem(user, "username")->valuestring, loginData.username)==0);
+        if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, loginData.username)==0){
+          found = 1;
+          index++;
+          break;
+        }
+      }
+      if(found){
+        if(strcasecmp(cJSON_GetObjectItem(user, "password")->valuestring, loginData.password)!=0){
+          char *responseString = cJSON_PrintUnformatted(
+            createJsonMessage(MESSAGE_CODE, cJSON_CreateString("Invalid Password.")));
+          write(clientfd, responseString, strlen(responseString));
+          write(clientfd, "\0", 1);
+          break;
+        }
       }
     }
-    if(found){
-      if(strcasecmp(cJSON_GetObjectItem(user, "password")->valuestring, password)!=0){
-        free(username);
-        free(password);
-        return cJSON_PrintUnformatted(createJsonMessage(MESSAGE_CODE, "Invalid Password."));
-      }
-    }
-    else{
-      free(username);
-      free(password);
-      return cJSON_PrintUnformatted(createJsonMessage(MESSAGE_CODE, "Invalid username."));
+    
+    if(!found){
+      char *responseString = cJSON_PrintUnformatted(
+        createJsonMessage(MESSAGE_CODE, cJSON_CreateString("Invalid username.")));
+      write(clientfd, responseString, strlen(responseString));
+      write(clientfd, "\0", 1);
+      break;
     }
 
-    // password giusta
-    return cJSON_PrintUnformatted(createJsonMessage(MESSAGE_CODE, "Login successfull."));
+    
+    printf("Controlled");
+
+
+    // token generator
+    srand(time(NULL)); // reset rand()
+    char token[SESSION_TOKEN_LENGTH];
+    for( int i = 0; i < SESSION_TOKEN_LENGTH; ++i){
+      token[i] = '!' + rand()%93; // da 33(!) a 125 (})
+    }
+
+    cJSON_ReplaceItemInObject(user, "token", cJSON_CreateString(token));
+    cJSON_ReplaceItemInArray(users, index, user);
+
+    ftruncate(fd, 0);
+    fseek(file, 0, SEEK_SET);
+    fileContent = cJSON_Print(users);
+    fwrite(fileContent, 1, strlen(fileContent), file);
+
+    // // password giusta
+    // // char *responseString = cJSON_PrintUnformatted(
+    // //   createJsonMessage(MESSAGE_CODE, cJSON_CreateString("Login successful.")));
+
+    
+    loginData.request_type = LOGIN_SUCCESSFUL_RESPONSE;
+    strcpy(loginData.password, ""); // delete password for safety
+    strncpy(loginData.token, token, SESSION_TOKEN_LENGTH+1);
+
+    char *responseString = cJSON_PrintUnformatted(
+      createJsonMessage(LOGIN_INFO_CODE, parseLoginDataToJSON(&loginData)));
+
+    printf("stringa: %s\n", responseString);
+
+    write(clientfd, responseString, strlen(responseString));
+    write(clientfd, "\0", 1);
     
 
 
-    free(username);
-    free(password);
+
+
+
+
 
     break;
   }
 
   default:
     printf("ERROR: Invalid action_code.\n");
-    return "";
+    break;
   }
+
 }
 
 int main(int argc, char *argv[]){
@@ -194,7 +253,7 @@ int main(int argc, char *argv[]){
   struct sockaddr_in serverAddress, clientAddress;
 
   // creates files if it doesn't exist
-  FILE *file = fopen("./data/ticketList.json", "a");
+  FILE *file = fopen(TICKET_FILE_ADDRESS, "a");
   fclose(file);
   file = fopen("./data/users.json", "a");
   fclose(file);
@@ -207,6 +266,12 @@ int main(int argc, char *argv[]){
     exit(-1);
   }
   printf("Server socket created successfully.\n");
+
+  //! PER FAR RIMANDARE IL SERVER
+  int reuse=1;
+  if(setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, (void *)&reuse, sizeof(reuse))<0){
+    printf("Errore SO_REUSEADDR");
+  }
 
   // definizio indirizzo server
   serverAddress.sin_family = AF_INET;
@@ -254,11 +319,10 @@ int main(int argc, char *argv[]){
         //lettura messaggio dal client e stampa
         char message[256]= {0};
         readMessage(clientfd, message);
-        // printf("Received from client n.%d: %s", clientfd, message);
-        
-        char *responseString = handleMessage(message);
-        write(clientfd, responseString, strlen(responseString));
-        write(clientfd, "\0", 1);
+        printf("Received from client n.%d: %s", clientfd, message);
+        handleMessage(clientfd, message);
+        // write(clientfd, responseString, strlen(responseString));
+        // write(clientfd, "\0", 1);
         close(clientfd);
         printf("Connection closed.\n");
         exit(0); // terminate child process

@@ -12,16 +12,10 @@
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
 #include "../include/functions.h"
+#include "../include/message.h"
 
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
-
-
-/*
-void pulisci_buffer_input() {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
-}*/
 
 //! USARE FGETS INVECE CHE SCANF O PULIRE IL BUFFER
 
@@ -69,22 +63,28 @@ Ticket createTicket() {
 
 
 // message interpretation
-void handleMessage(char *message){
-  cJSON *jsonMessage = cJSON_Parse(message);
-  if(jsonMessage==NULL){
+void handleMessage(char *stringMessage, char *sessionToken){
+  Message message;
+  if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
     printf("No response received.\n");
     return;
   }
 
-  int actionCode = cJSON_GetObjectItem(jsonMessage, "ACTION_CODE")->valueint;
-  cJSON *jsonData = cJSON_GetObjectItem(jsonMessage, "DATA");
+  // cJSON *jsonInData = cJSON_GetObjectItem(jsonInMessage, "data");
 
-  switch (actionCode)
+  switch (message.action_code)
   {
   case MESSAGE_CODE:{
-    char *data = cJSON_Print(jsonData);
-    printf("Server: %s\n", jsonData->valuestring);
-    free(data);
+    printf("Server: %s\n", cJSON_Print(message.data));
+    break;
+  }
+
+  case LOGIN_INFO_CODE:{
+    // char *message = cJSON_GetObjectItem(jsonInData, "message")->valuestring;
+    // sessionToken = cJSON_GetObjectItem(jsonInData, "token")->valuestring;
+    LoginData loginData;
+    parseJSONToLoginData(message.data, &loginData);
+    printf("Token: %s\n", loginData.token);
     break;
   }
   
@@ -137,6 +137,7 @@ int main(int argc, char *argv[]){
   printf("Connected to server at %s:%d\n", SERVER_ADDRESS, SERVER_PORT);
 
 
+  char sessionToken[SESSION_TOKEN_LENGTH];
 
 
   //* CREAZIONE TICKET 
@@ -146,27 +147,27 @@ int main(int argc, char *argv[]){
   // char *message = cJSON_PrintUnformatted(jsonMessage);
 
 
+  Message message;
+  message.action_code = LOGIN_REQUEST_CODE;
+  LoginData loginData;
+  loginData.request_type = LOGIN_REQUEST;
+  strcpy(loginData.username, "sean");
+  strcpy(loginData.password, "password");
+  message.data = parseLoginDataToJSON(&loginData);
 
-  cJSON *jsonMessage = cJSON_CreateObject();
-  cJSON_AddNumberToObject(jsonMessage, "ACTION_CODE", LOGIN_REQUEST);
-  cJSON *jsonData = cJSON_CreateObject();
-  cJSON_AddStringToObject(jsonData, "username", "sean");
-  cJSON_AddStringToObject(jsonData, "password", "password");
-  cJSON_AddItemToObject(jsonMessage, "data", jsonData);
-  char *message = cJSON_Print(jsonMessage);
-
-  //client writing
-  write(clientfd, message, strlen(message));
+  // writing to server
+  char *stringMessage = cJSON_Print(parseMessageToJSON(&message));
+  write(clientfd, stringMessage, strlen(stringMessage));
   write(clientfd, "\0", 1);
-  printf("Ticket sent to server.\n");
-
+  printf("Message sent to server.\n");
 
 
 
   // client receiving
   char receivedMessage[256]= {0};
   readMessage(clientfd, receivedMessage);
-  handleMessage(receivedMessage);
+  // printf("received %s\n", receivedMessage);
+  handleMessage(receivedMessage, sessionToken);
 
 
 
