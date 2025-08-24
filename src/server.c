@@ -98,24 +98,61 @@ int getNextTicketId(){
   return maxId+1;
 }
 
-// cJSON *createJsonMessage(int code, cJSON *data){
-//   cJSON *jsonMessage = cJSON_CreateObject();
-//   cJSON_AddNumberToObject(jsonMessage, "action_code", code);
-//   cJSON_AddItemToObject(jsonMessage, "data", data);
-//   return jsonMessage;
-// }
+// return role if token is valid, NULL otherwise
+char *authenticate(char *session_token){
+  FILE *file = fopen(USERS_FILE_ADDRESS, "r");
+  flock(fileno(file), LOCK_SH);
+
+  fseek(file, 0, SEEK_END);
+  int fileSize = ftell(file);
+  fseek(file, 0, SEEK_SET);
+  char *fileContent = malloc(fileSize);
+  fread(fileContent, 1, fileSize, file);
+
+  cJSON *users = cJSON_Parse(fileContent);
+  free(fileContent);
+  fclose(file);
+  cJSON *user = NULL;
+  cJSON_ArrayForEach(user, users){
+    if(strcmp(cJSON_GetObjectItem(user, "token")->valuestring, session_token)==0){
+      return cJSON_GetObjectItem(user, "role")->valuestring;
+    }
+  }
+
+  return NULL;
+}
 
 void handleMessage(int clientfd, char *stringMessage){
+
   Message message;
+  char *role;
   if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
     printf("ERROR: invalid JSON");
     return;
+  }
+
+  if(message.action_code!=LOGIN_REQUEST_CODE){
+    role = authenticate(message.session_token);
+    if(role==NULL){
+      message.action_code = MESSAGE_CODE;
+      message.data = cJSON_CreateString("Invalid session, try logging in.");
+      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      write(clientfd, responseMessage, strlen(responseMessage));
+      write(clientfd, "\0", 1);
+      free(responseMessage);
+      return;
+    }
   }
 
   switch (message.action_code)
   {
   case CREATE_TICKET_CODE:{
     //* CREAZIONE TICKET
+    Ticket ticket;
+    if(!parseJSONToTicket(message.data, &ticket)){
+      printf("ERROR: invalid json\n");
+      return;
+    }
     int ticketId = getNextTicketId();
     cJSON_ReplaceItemInObject(message.data, "id", cJSON_CreateNumber(ticketId));
 
@@ -182,10 +219,14 @@ void handleMessage(int clientfd, char *stringMessage){
 
           write(clientfd, responseMessage, strlen(responseMessage));
           write(clientfd, "\0", 1);
+
+          free(responseMessage);
+          fclose(file);
           break;
         }
       }
     }
+    fclose(file);
     
     if(!found){
       message.action_code = MESSAGE_CODE;
@@ -221,8 +262,11 @@ void handleMessage(int clientfd, char *stringMessage){
 
     write(clientfd, responseString, strlen(responseString));
     write(clientfd, "\0", 1);
+    free(responseString);
     break;
   }
+
+
 
   default:
     printf("ERROR: Invalid action_code.\n");

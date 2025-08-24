@@ -67,8 +67,8 @@ short parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
 cJSON *parseMessageToJSON(Message *message){
   cJSON *jsonMessage = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonMessage, "action_code", message->action_code);
-  cJSON_AddItemToObject(jsonMessage, "data", message->data);
   cJSON_AddStringToObject(jsonMessage, "session_token", message->session_token);
+  cJSON_AddItemToObject(jsonMessage, "data", message->data);
 
   return jsonMessage;
 }
@@ -76,6 +76,7 @@ cJSON *parseMessageToJSON(Message *message){
 short parseJSONToMessage(cJSON *jsonMessage, Message *message){
   if(jsonMessage==NULL) return 0;
   message->action_code = cJSON_GetObjectItem(jsonMessage, "action_code")->valueint;
+  strcpy(message->session_token, cJSON_GetObjectItem(jsonMessage, "session_token")->valuestring);
   message->data = cJSON_GetObjectItem(jsonMessage, "data");
 
   return 1;

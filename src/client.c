@@ -124,16 +124,17 @@ int main(int argc, char *argv[]){
 
 
   //* CREAZIONE TICKET 
-  // Ticket ticket;
-  // strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
-  // strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
-  // ticket.date.giorno = 1;
-  // ticket.date.mese = 1;
-  // ticket.date.anno = 2023;
-  // ticket.priority = MEDIUM;
-  // ticket.state = OPEN;
-  // message.action_code = CREATE_TICKET_CODE;
-  // message.data = parseTicketToJSON(&ticket);
+  Ticket ticket;
+  strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
+  strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
+  ticket.date.giorno = 1;
+  ticket.date.mese = 1;
+  ticket.date.anno = 2023;
+  ticket.priority = MEDIUM;
+  ticket.state = OPEN;
+  message.action_code = CREATE_TICKET_CODE;
+  message.data = parseTicketToJSON(&ticket);
+  strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
 
 
   //* RICHIESTA LOGIN
