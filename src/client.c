@@ -99,24 +99,6 @@ int main(int argc, char *argv[]){
   printf("Client started.\n");
   int clientfd, resultCode;
   struct sockaddr_in serverAddress;
-  printf("Creo ticket...\n");
-  // Ticket ticket = createTicket();
-
-
-  //! ------------------------------
-  Ticket ticket;
-  strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
-  strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
-  
-  ticket.date.giorno = 1;
-  ticket.date.mese = 1;
-  ticket.date.anno = 2023;
-  ticket.priority = MEDIUM;
-  ticket.state = OPEN;
-  //! ------------------------------
-
-
-  printf("Ticket creato: %d, %s, %s\n", ticket.id, ticket.title, ticket.description);
   // create socket
   clientfd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -138,22 +120,30 @@ int main(int argc, char *argv[]){
 
 
   char sessionToken[SESSION_TOKEN_LENGTH];
+  Message message;
 
 
   //* CREAZIONE TICKET 
-  // cJSON *jsonMessage = cJSON_CreateObject();
-  // cJSON_AddNumberToObject(jsonMessage, "ACTION_CODE", CREATE_TICKET_CODE);
-  // cJSON_AddItemToObject(jsonMessage, "data", parseTicketToJSON(&ticket));
-  // char *message = cJSON_PrintUnformatted(jsonMessage);
+  Ticket ticket;
+  strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
+  strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
+  ticket.date.giorno = 1;
+  ticket.date.mese = 1;
+  ticket.date.anno = 2023;
+  ticket.priority = MEDIUM;
+  ticket.state = OPEN;
+  message.action_code = CREATE_TICKET_CODE;
+  message.data = parseTicketToJSON(&ticket);
 
 
-  Message message;
-  message.action_code = LOGIN_REQUEST_CODE;
-  LoginData loginData;
-  loginData.request_type = LOGIN_REQUEST;
-  strcpy(loginData.username, "sean");
-  strcpy(loginData.password, "password");
-  message.data = parseLoginDataToJSON(&loginData);
+  //* RICHIESTA LOGIN
+  // Message message;
+  // message.action_code = LOGIN_REQUEST_CODE;
+  // LoginData loginData;
+  // loginData.request_type = LOGIN_REQUEST;
+  // strcpy(loginData.username, "sean");
+  // strcpy(loginData.password, "password");
+  // message.data = parseLoginDataToJSON(&loginData);
 
   // writing to server
   char *stringMessage = cJSON_Print(parseMessageToJSON(&message));
