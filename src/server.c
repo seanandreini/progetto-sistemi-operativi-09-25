@@ -14,6 +14,7 @@
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
 #include "../include/functions.h"
+#include "../include/agent.h"
 
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
@@ -122,6 +123,119 @@ char *authenticate(char *session_token){
   return NULL;
 }
 
+//Agent availability control function
+int isAgentAvailable(char *username){
+  FILE *file = fopen(TICKET_FILE_ADDRESS, "r");
+  if(file == NULL){
+    printf("Error opening users file.\n");
+    return 0;
+  }
+  flock(fileno(file), LOCK_SH);
+
+  fseek(file, 0, SEEK_END);
+  long fileSize = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  char *fileContent = malloc(fileSize + 1);
+  fread(fileContent, 1, fileSize, file);
+  fileContent[fileSize] = '\0';
+  fclose(file);
+
+  cJSON *ticketList = cJSON_Parse(fileContent);
+  free (fileContent);
+
+  int hasOpenTicket = 0;
+  cJSON *ticket = NULL;
+  cJSON_ArrayForEach(ticket, ticketList){
+    cJSON *agent = cJSON_GetObjectItem(ticket, "agent");
+    cJSON *agentUsername = cJSON_GetObjectItem(agent, "username");
+
+    if(strcmp(agentUsername->valuestring, username)==0){
+      cJSON *state = cJSON_GetObjectItem(ticket, "state");
+      if(state->valueint == OPEN || state->valueint == IN_PROGRESS){
+        hasOpenTicket = 1;
+        break;
+      }
+    }
+  }
+  cJSON_Delete(ticketList);
+  return !hasOpenTicket;
+}
+
+//Available agents loading 
+cJSON* loadAvailableAgents(){
+  FILE *file = fopen(USERS_FILE_ADDRESS, "r");
+  if(file == NULL){
+    printf("Error opening users file.\n");
+    return NULL;
+  }
+  flock(fileno(file), LOCK_SH);
+
+  fseek(file, 0, SEEK_END);
+  long fileSize = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  char *fileContent = malloc(fileSize + 1);
+  fread(fileContent, 1, fileSize, file);
+  fileContent[fileSize] = '\0';
+
+  cJSON *users = cJSON_Parse(fileContent);
+  free(fileContent);
+  fclose(file);
+
+  cJSON *agents = cJSON_CreateArray();
+  cJSON *user = NULL;
+  cJSON_ArrayForEach(user, users){
+    cJSON *status = cJSON_GetObjectItem(user, "status");
+    cJSON *role = cJSON_GetObjectItem(user, "role");
+
+    if(role != NULL && status != NULL && strcmp(role->valuestring, "agent")==0 && strcmp(status->valuestring, "available")==0){  
+      cJSON_AddItemToArray(agents, cJSON_Duplicate(user, 1)); //creo una copia dell'oggetto user e la aggiungo all'array agents per evitare di cancellare l'oggetto user quando cancello users
+    }
+  }
+  cJSON_Delete(users);
+
+  return agents;
+}
+
+void setAgentStatus(char *username, char *status){
+  FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
+  if(file == NULL){
+    printf("Error opening users file.\n");
+    return;
+  }
+
+  int fd = fileno(file);
+  flock(fd, LOCK_EX);
+
+  fseek(file, 0, SEEK_END);
+  long fileSize = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  char *fileContent = malloc(fileSize + 1);
+  fread(fileContent, 1, fileSize, file);
+  fileContent[fileSize] = '\0';
+
+  cJSON *users = cJSON_Parse(fileContent);
+  free(fileContent);
+
+  cJSON *user = NULL;
+  cJSON_ArrayForEach(user, users){
+    if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, username)==0){    
+      cJSON_ReplaceItemInObject(user, "status", cJSON_CreateString(status)); //if already exists, replace it, if doesn't exist, create it
+      break;
+    }
+  }
+  ftruncate(fd, 0);
+  fseek(file, 0, SEEK_SET);
+  char *updatedContent = cJSON_Print(users);
+  fwrite(updatedContent, 1, strlen(updatedContent), file); //overwrite the file with the updated content
+  free(updatedContent);
+
+  cJSON_Delete(users);
+  fclose(file);
+}
+
 void handleMessage(int clientfd, char *stringMessage){
 
   Message message;
@@ -153,26 +267,47 @@ void handleMessage(int clientfd, char *stringMessage){
       printf("ERROR: invalid json\n");
       return;
     }
-    int ticketId = getNextTicketId();
-    cJSON_ReplaceItemInObject(message.data, "id", cJSON_CreateNumber(ticketId));
 
-    saveTicket(message.data);
-    printf("Ticket saved.\n");
+    // assign ticket to an available agent (round robin)
+    static int nextAgentIndex = 0;
+    cJSON *availableAgents = loadAvailableAgents();
+    int agentsCount = cJSON_GetArraySize(availableAgents);
 
-    char *base = "Your ticket code is: ";
-    int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
-    char *response = malloc(responseLength+1);
-    snprintf(response, responseLength+1, "%s%d", base, ticketId);
+    if(agentsCount > 0){
+      cJSON *assignedAgent = cJSON_GetArrayItem(availableAgents, nextAgentIndex % agentsCount);
+      char *agentUsername = cJSON_GetObjectItem(assignedAgent, "username")->valuestring;
+      nextAgentIndex++;
 
-    message.action_code = MESSAGE_CODE;
-    message.data = cJSON_CreateString(response);
+      cJSON_DeleteItemFromObject(message.data, "agent");
+      cJSON_AddItemToObject(message.data, "agent", cJSON_Duplicate(assignedAgent, 1));
+
+      cJSON_Delete(availableAgents);
     
-    char *responseString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
+      int ticketId = getNextTicketId();
+      cJSON_ReplaceItemInObject(message.data, "id", cJSON_CreateNumber(ticketId));
 
-    free(response);
-    write(clientfd, responseString, strlen(responseString));
-    write(clientfd, "\0", 1);
-    break;
+      saveTicket(message.data);
+      printf("Ticket saved.\n");
+
+      setAgentStatus(cJSON_GetObjectItem(cJSON_GetObjectItem(message.data, "agent"), "username")->valuestring, "busy");
+      printf("Agent %s assigned to ticket %d. Status set to busy.\n", cJSON_GetObjectItem(cJSON_GetObjectItem(message.data, "agent"), "username")->valuestring, ticketId);
+      
+      char *base = "Your ticket code is: ";
+      int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
+      char *response = malloc(responseLength+1);
+      snprintf(response, responseLength+1, "%s%d", base, ticketId);
+
+      message.action_code = MESSAGE_CODE;
+      message.data = cJSON_CreateString(response);
+      
+      char *responseString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
+
+      free(response);
+      write(clientfd, responseString, strlen(responseString));
+      write(clientfd, "\0", 1);
+      break;
+    }
+    //!scegliere cosa fare se non ci sono agenti disponibili!
   }
   
   case LOGIN_REQUEST_CODE:{
@@ -224,6 +359,19 @@ void handleMessage(int clientfd, char *stringMessage){
           fclose(file);
           break;
         }
+        //if user is an agent, check availability
+        cJSON *role = cJSON_GetObjectItem(user, "role");
+        if(role != NULL && strcmp(role->valuestring, "agent")==0){
+          if(!isAgentAvailable(loginData.username)){
+            setAgentStatus(loginData.username, "busy");
+            printf("Agent %s logged in. Status remains busy (has open tickets).\n", loginData.username);
+          }
+          else{
+            setAgentStatus(loginData.username, "available");
+            printf("Agent %s logged in. Status set to available.\n", loginData.username);
+          }
+        }
+        
       }
     }
     fclose(file);
@@ -266,7 +414,7 @@ void handleMessage(int clientfd, char *stringMessage){
     break;
   }
 
-
+  //??ci vuole un case RESOLVE_TICKET_CODE per far cambiare lo stato del ticket e liberare l'agente??
 
   default:
     printf("ERROR: Invalid action_code.\n");
