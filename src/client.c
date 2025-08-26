@@ -74,12 +74,12 @@ void handleMessage(char *stringMessage, char *sessionToken){
 
   switch (message.action_code)
   {
-  case MESSAGE_CODE:{
+  case INFO_MESSAGE_CODE:{
     printf("Server: %s\n", cJSON_Print(message.data));
     break;
   }
 
-  case LOGIN_INFO_CODE:{
+  case LOGIN_INFO_MESSAGE_CODE:{
     // char *message = cJSON_GetObjectItem(jsonInData, "message")->valuestring;
     // sessionToken = cJSON_GetObjectItem(jsonInData, "token")->valuestring;
     LoginData loginData;
@@ -123,36 +123,43 @@ int main(int argc, char *argv[]){
   Message message;
 
 
-  //* CREAZIONE TICKET 
-  Ticket ticket;
-  strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
-  strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
-  ticket.date.giorno = 1;
-  ticket.date.mese = 1;
-  ticket.date.anno = 2023;
-  ticket.priority = MEDIUM;
-  ticket.state = OPEN;
-  message.action_code = CREATE_TICKET_CODE;
-  message.data = parseTicketToJSON(&ticket);
-  strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+  // //* CREAZIONE TICKET 
+  // Ticket ticket;
+  // strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
+  // strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
+  // ticket.date.giorno = 1;
+  // ticket.date.mese = 1;
+  // ticket.date.anno = 2023;
+  // ticket.priority = MEDIUM;
+  // ticket.state = OPEN;
+  // message.action_code = CREATE_TICKET_MESSAGE_CODE;
+  // message.data = parseTicketToJSON(&ticket);
+  // strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
 
 
   //* RICHIESTA LOGIN
-  // Message message;
-  // message.action_code = LOGIN_REQUEST_CODE;
+  // message.action_code = LOGIN_REQUEST_MESSAGE_CODE;
   // LoginData loginData;
   // loginData.request_type = LOGIN_REQUEST;
   // strcpy(loginData.username, "sean");
   // strcpy(loginData.password, "password");
   // message.data = parseLoginDataToJSON(&loginData);
 
-  // writing to server
+  //* SIGN IN
+  message.action_code = SIGNIN_MESSAGE_CODE;
+  LoginData loginData;
+  loginData.request_type = SIGNIN_REQUEST;
+  strcpy(loginData.username, "nuovoUsername");
+  strcpy(loginData.password, "password");
+  message.data = parseLoginDataToJSON(&loginData);
+
+  //* writing to server
   char *stringMessage = cJSON_Print(parseMessageToJSON(&message));
   write(clientfd, stringMessage, strlen(stringMessage));
   write(clientfd, "\0", 1);
   printf("Message sent to server.\n");
 
-  // client receiving
+  //* client receiving
   char receivedMessage[256]= {0};
   readMessage(clientfd, receivedMessage);
   // printf("received %s\n", receivedMessage);

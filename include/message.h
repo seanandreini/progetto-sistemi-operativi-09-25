@@ -3,10 +3,11 @@
 
 #define SESSION_TOKEN_LENGTH 16
 #define INITIAL_MESSAGE_SIZE 16
-#define CREATE_TICKET_CODE 0
-#define MESSAGE_CODE 1
-#define LOGIN_REQUEST_CODE 2
-#define LOGIN_INFO_CODE 3
+#define CREATE_TICKET_MESSAGE_CODE 0
+#define INFO_MESSAGE_CODE 1
+#define LOGIN_REQUEST_MESSAGE_CODE 2
+#define LOGIN_INFO_MESSAGE_CODE 3
+#define SIGNIN_MESSAGE_CODE 4
 
 #define MAX_USERNAME_LENGTH 20
 #define MAX_PASSWORD_LENGTH 20
@@ -23,7 +24,7 @@ typedef struct struct_json_message
 typedef enum login_request_type{
   LOGIN_REQUEST = 0,
   LOGIN_SUCCESSFUL_RESPONSE = 1,
-  LOGIN_FAILED_RESPONSE = 2
+  SIGNIN_REQUEST = 2,
 } LoginRequestType;
 
 typedef struct login_data
