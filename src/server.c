@@ -16,8 +16,6 @@
 #include "../include/functions.h"
 #include "../include/agent.h"
 
-//TODO CALLOC AL POSTO DI MALLOC
-
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
 
@@ -46,7 +44,7 @@ void saveTicket(cJSON *ticket){
     if(fileSize != 0){
       // printf("File is not empty.\n");
 
-      char *fileContent = malloc(fileSize + 1);
+      char *fileContent = calloc(fileSize+1, sizeof(char));
       fread(fileContent, 1, fileSize, file);
       fileContent[fileSize] = '\0';
 
@@ -81,7 +79,7 @@ int getNextTicketId(){
   fseek(file, 0, SEEK_END);
   long fileSize = ftell(file);
   fseek(file, 0, SEEK_SET);
-  char *fileContent = malloc(fileSize + 1);
+  char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
   fileContent[fileSize] = '\0';
 
@@ -110,7 +108,7 @@ char *authenticate(char *session_token){
   fseek(file, 0, SEEK_END);
   long fileSize = ftell(file);
   fseek(file, 0, SEEK_SET);
-  char *fileContent = malloc(fileSize);
+  char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
 
   cJSON *users = cJSON_Parse(fileContent);
@@ -139,7 +137,7 @@ int isAgentAvailable(char *username){
   long fileSize = ftell(file);
   fseek(file, 0, SEEK_SET);
 
-  char *fileContent = malloc(fileSize + 1);
+  char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
   fileContent[fileSize] = '\0';
   fclose(file);
@@ -180,7 +178,7 @@ cJSON* loadAvailableAgents(){
   long fileSize = ftell(file);
   fseek(file, 0, SEEK_SET);
 
-  char *fileContent = malloc(fileSize + 1);
+  char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
   fileContent[fileSize] = '\0';
 
@@ -217,7 +215,7 @@ void setAgentStatus(char *username, char *status){
   long fileSize = ftell(file);
   fseek(file, 0, SEEK_SET);
 
-  char *fileContent = malloc(fileSize + 1);
+  char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
   fileContent[fileSize] = '\0';
 
@@ -300,7 +298,7 @@ void handleMessage(int clientfd, char *stringMessage){
       
       char *base = "Your ticket code is: ";
       int responseLength = snprintf(NULL, 0, "%s%d", base, ticketId);
-      char *response = malloc(responseLength+1);
+      char *response = calloc(responseLength+1, sizeof(char));
       snprintf(response, responseLength+1, "%s%d", base, ticketId);
 
       message.action_code = INFO_MESSAGE_CODE;
@@ -331,7 +329,7 @@ void handleMessage(int clientfd, char *stringMessage){
     fseek(file, 0, SEEK_END);
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
-    char *fileContent = malloc(fileSize+1);  
+    char *fileContent = calloc(fileSize+1, sizeof(char));  
 
     short found = 0;
     cJSON *users = NULL;
