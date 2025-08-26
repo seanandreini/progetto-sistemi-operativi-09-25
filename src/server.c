@@ -46,7 +46,6 @@ void saveTicket(cJSON *ticket){
 
       char *fileContent = calloc(fileSize+1, sizeof(char));
       fread(fileContent, 1, fileSize, file);
-      fileContent[fileSize] = '\0';
 
       jsonTicketList = cJSON_Parse(fileContent);
       free(fileContent);
@@ -81,7 +80,6 @@ int getNextTicketId(){
   fseek(file, 0, SEEK_SET);
   char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
-  fileContent[fileSize] = '\0';
 
   cJSON *jsonTicketList = cJSON_Parse(fileContent);
   cJSON *ticket = cJSON_CreateArray();
@@ -139,7 +137,6 @@ int isAgentAvailable(char *username){
 
   char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
-  fileContent[fileSize] = '\0';
   fclose(file);
 
   cJSON *ticketList = cJSON_Parse(fileContent);
@@ -180,7 +177,6 @@ cJSON* loadAvailableAgents(){
 
   char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
-  fileContent[fileSize] = '\0';
 
   cJSON *users = cJSON_Parse(fileContent);
   free(fileContent);
@@ -193,7 +189,7 @@ cJSON* loadAvailableAgents(){
     cJSON *role = cJSON_GetObjectItem(user, "role");
 
     if(role != NULL && status != NULL && strcmp(role->valuestring, "agent")==0 && strcmp(status->valuestring, "available")==0){  
-      cJSON_AddItemToArray(agents, cJSON_Duplicate(user, 1)); //creo una copia dell'oggetto user e la aggiungo all'array agents per evitare di cancellare l'oggetto user quando cancello users
+      cJSON_AddItemToArray(agents, user); 
     }
   }
   cJSON_Delete(users);
@@ -217,7 +213,6 @@ void setAgentStatus(char *username, char *status){
 
   char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
-  fileContent[fileSize] = '\0';
 
   cJSON *users = cJSON_Parse(fileContent);
   free(fileContent);
@@ -283,7 +278,7 @@ void handleMessage(int clientfd, char *stringMessage){
       nextAgentIndex++;
 
       cJSON_DeleteItemFromObject(message.data, "agent");
-      cJSON_AddItemToObject(message.data, "agent", cJSON_Duplicate(assignedAgent, 1));
+      cJSON_AddItemToObject(message.data, "agent", assignedAgent);
 
       cJSON_Delete(availableAgents);
     
