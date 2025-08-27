@@ -10,3 +10,4 @@ cJSON *parseMessageToJSON(Message *message);
 short parseJSONToMessage(cJSON *jsonMessage, Message *message);
 cJSON *parseLoginDataToJSON(LoginData *loginData);
 short parseJSONToLoginData(cJSON *jsonLoginData, LoginData *loginData);
+int parseJSONToAgent(cJSON *jsonAgent, Agent *agent);

@@ -34,6 +34,7 @@ cJSON *parseAgentToJSON(Agent *agent) {
   cJSON *jsonAgent = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonAgent, "code", agent->code);
   cJSON_AddStringToObject(jsonAgent, "username", agent->username);
+  cJSON_AddNumberToObject(jsonAgent, "isAvailable", agent->isAvailable);
   return jsonAgent;
 }
 
@@ -49,18 +50,14 @@ short parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
   ticket->description[sizeof(ticket->description)-1] = '\0';
 
   cJSON *jsonDate = cJSON_GetObjectItem(jsonTicket, "date");
-  ticket->date.giorno = cJSON_GetObjectItem(jsonDate, "giorno")->valueint;
-  ticket->date.mese = cJSON_GetObjectItem(jsonDate, "mese")->valueint;
-  ticket->date.anno = cJSON_GetObjectItem(jsonDate, "anno")->valueint;
+  parseJSONToDate(jsonDate, &ticket->date);
 
   ticket->priority = (Priority)cJSON_GetObjectItem(jsonTicket, "priority")->valueint;
   ticket->state = (State)cJSON_GetObjectItem(jsonTicket, "state")->valueint;
 
   cJSON *jsonAgent = cJSON_GetObjectItem(jsonTicket, "agent");
-  ticket->agent.code = cJSON_GetObjectItem(jsonAgent, "code")->valueint;
-  strncpy(ticket->agent.username, cJSON_GetObjectItem(jsonAgent, "username")->valuestring, sizeof(ticket->agent.username)-1);
-  ticket->agent.username[sizeof(ticket->agent.username)-1] = '\0';
-
+  parseJSONToAgent(jsonAgent, &ticket->agent);
+  
   return 1;
 }
 
@@ -99,6 +96,27 @@ short parseJSONToLoginData(cJSON *jsonLoginData, LoginData *loginData){
   strcpy(loginData->username, cJSON_GetObjectItem(jsonLoginData, "username")->valuestring);
   strcpy(loginData->password, cJSON_GetObjectItem(jsonLoginData, "password")->valuestring);
   strcpy(loginData->token, cJSON_GetObjectItem(jsonLoginData, "token")->valuestring);
+
+  return 1;
+}
+
+int parseJSONToAgent(cJSON *jsonAgent, Agent *agent){  //??migliorabile??
+  if(jsonAgent==NULL) return 0;
+
+  agent->code = cJSON_GetObjectItem(jsonAgent, "code")->valueint;
+  strncpy(agent->username, cJSON_GetObjectItem(jsonAgent, "username")->valuestring, sizeof(agent->username)-1);
+  agent->username[sizeof(agent->username)-1] = '\0';
+  agent -> isAvailable = cJSON_GetObjectItem(jsonAgent, "isAvailable")->valueint;
+
+  return 1;
+}
+
+int parseJSONToDate(cJSON *jsonDate, Date *date){
+  if(jsonDate==NULL) return 0;
+
+  date->giorno = cJSON_GetObjectItem(jsonDate, "giorno")->valueint;
+  date->mese = cJSON_GetObjectItem(jsonDate, "mese")->valueint;
+  date->anno = cJSON_GetObjectItem(jsonDate, "anno")->valueint;
 
   return 1;
 }
