@@ -4,6 +4,7 @@
 typedef struct struct_agent{
     int code; // unique identifier for the agent //!(scegliere come fare)
     char username[50];
+    int isAvailable; // 1 if available, 0 if busy
 } Agent;
 
 #endif 
