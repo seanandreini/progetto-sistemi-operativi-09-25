@@ -31,7 +31,7 @@ Ticket createTicket() {
 
   //TODO: inserire logica controllo data
   printf("Data (gg/mm/aaaa):\n");
-  scanf("%d/%d/%d", &t.date.giorno, &t.date.mese, &t.date.anno);
+  scanf("%d/%d/%d", &t.date.day, &t.date.month, &t.date.year);
 
   while(!goodInput) {
     int temp_priority;
@@ -88,6 +88,27 @@ void handleMessage(char *stringMessage, char *sessionToken){
     break;
   }
   
+  case TICKET_CONSULTATION_MESSAGE_CODE:{
+    if(cJSON_GetArraySize(message.data)==0){
+      printf("No tickets linked to this user.\n");
+      break;
+    }
+
+    cJSON *jsonTicket;
+    cJSON_ArrayForEach(jsonTicket, message.data){
+      Ticket ticket;
+      parseJSONToTicket(jsonTicket, &ticket);
+      printf("Ticket number: %d\n%s\n%s\nPriority: %s\nStatus: %s\nCreated on: %d/%d/%d\nAgent assigned: %s\n", 
+        ticket.id, ticket.title, ticket.description, 
+        ticket.priority==HIGH? "High":ticket.priority==MEDIUM? "Medium":"Low", 
+        ticket.state==OPEN? "Open":ticket.state==IN_PROGRESS? "In progress":"Closed", 
+        ticket.date.day, ticket.date.month, ticket.date.year, 
+        ticket.state==OPEN? "No agent assigned":ticket.agent.username);
+    }
+
+    break;
+  }
+
   default:{
     printf("ERROR: Invalid action_code.\n");
     break;
@@ -145,13 +166,21 @@ int main(int argc, char *argv[]){
   // strcpy(loginData.password, "password");
   // message.data = parseLoginDataToJSON(&loginData);
 
-  //* SIGN IN
-  message.action_code = SIGNIN_MESSAGE_CODE;
-  LoginData loginData;
-  loginData.request_type = SIGNIN_REQUEST;
-  strcpy(loginData.username, "nuovoUsername");
-  strcpy(loginData.password, "password");
-  message.data = parseLoginDataToJSON(&loginData);
+  // //* SIGN IN
+  // message.action_code = SIGNIN_MESSAGE_CODE;
+  // LoginData loginData;
+  // loginData.request_type = SIGNIN_REQUEST;
+  // strcpy(loginData.username, "nuovoUsername");
+  // strcpy(loginData.password, "password");
+  // message.data = parseLoginDataToJSON(&loginData);
+
+
+  //* TICKET CONSULTATION
+  message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
+  strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+
+
+
 
   //* writing to server
   char *stringMessage = cJSON_Print(parseMessageToJSON(&message));

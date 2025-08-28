@@ -22,22 +22,7 @@ cJSON *parseTicketToJSON(Ticket *ticket) {
   return jsonTicket;
 }
 
-cJSON *parseDateToJSON(Date *date) {
-  cJSON *jsonDate = cJSON_CreateObject();
-  cJSON_AddNumberToObject(jsonDate, "giorno", date->giorno);
-  cJSON_AddNumberToObject(jsonDate, "mese", date->mese);
-  cJSON_AddNumberToObject(jsonDate, "anno", date->anno);
-  return jsonDate;
-}
-
-cJSON *parseAgentToJSON(Agent *agent) {
-  cJSON *jsonAgent = cJSON_CreateObject();
-  cJSON_AddNumberToObject(jsonAgent, "code", agent->code);
-  cJSON_AddStringToObject(jsonAgent, "username", agent->username);
-  return jsonAgent;
-}
-
-short parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
+int parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
   if(jsonTicket==NULL) return 0;
 
   ticket->id = cJSON_GetObjectItem(jsonTicket, "id")->valueint;
@@ -49,9 +34,9 @@ short parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
   ticket->description[sizeof(ticket->description)-1] = '\0';
 
   cJSON *jsonDate = cJSON_GetObjectItem(jsonTicket, "date");
-  ticket->date.giorno = cJSON_GetObjectItem(jsonDate, "giorno")->valueint;
-  ticket->date.mese = cJSON_GetObjectItem(jsonDate, "mese")->valueint;
-  ticket->date.anno = cJSON_GetObjectItem(jsonDate, "anno")->valueint;
+  ticket->date.day = cJSON_GetObjectItem(jsonDate, "giorno")->valueint;
+  ticket->date.month = cJSON_GetObjectItem(jsonDate, "mese")->valueint;
+  ticket->date.year = cJSON_GetObjectItem(jsonDate, "anno")->valueint;
 
   ticket->priority = (Priority)cJSON_GetObjectItem(jsonTicket, "priority")->valueint;
   ticket->state = (State)cJSON_GetObjectItem(jsonTicket, "state")->valueint;
@@ -64,6 +49,21 @@ short parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
   return 1;
 }
 
+cJSON *parseDateToJSON(Date *date) {
+  cJSON *jsonDate = cJSON_CreateObject();
+  cJSON_AddNumberToObject(jsonDate, "giorno", date->day);
+  cJSON_AddNumberToObject(jsonDate, "mese", date->month);
+  cJSON_AddNumberToObject(jsonDate, "anno", date->year);
+  return jsonDate;
+}
+
+cJSON *parseAgentToJSON(Agent *agent) {
+  cJSON *jsonAgent = cJSON_CreateObject();
+  cJSON_AddNumberToObject(jsonAgent, "code", agent->code);
+  cJSON_AddStringToObject(jsonAgent, "username", agent->username);
+  return jsonAgent;
+}
+
 cJSON *parseMessageToJSON(Message *message){
   cJSON *jsonMessage = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonMessage, "action_code", message->action_code);
@@ -73,7 +73,7 @@ cJSON *parseMessageToJSON(Message *message){
   return jsonMessage;
 }
 
-short parseJSONToMessage(cJSON *jsonMessage, Message *message){
+int parseJSONToMessage(cJSON *jsonMessage, Message *message){
   if(jsonMessage==NULL) return 0;
   message->action_code = cJSON_GetObjectItem(jsonMessage, "action_code")->valueint;
   strcpy(message->session_token, cJSON_GetObjectItem(jsonMessage, "session_token")->valuestring);
@@ -85,6 +85,7 @@ short parseJSONToMessage(cJSON *jsonMessage, Message *message){
 cJSON *parseLoginDataToJSON(LoginData *loginData){
   cJSON *jsonLoginData = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonLoginData, "request_type", loginData->request_type);
+  cJSON_AddNumberToObject(jsonLoginData, "role", loginData->role);
   cJSON_AddStringToObject(jsonLoginData, "username", loginData->username);
   cJSON_AddStringToObject(jsonLoginData, "password", loginData->password);
   cJSON_AddStringToObject(jsonLoginData, "token", loginData->token);
@@ -92,10 +93,11 @@ cJSON *parseLoginDataToJSON(LoginData *loginData){
   return jsonLoginData;
 }
 
-short parseJSONToLoginData(cJSON *jsonLoginData, LoginData *loginData){
+int parseJSONToLoginData(cJSON *jsonLoginData, LoginData *loginData){
   if(jsonLoginData==NULL) return 0;
 
-  loginData->request_type = cJSON_GetObjectItem(jsonLoginData, "request_type")->valueint;
+  // loginData->request_type = cJSON_GetObjectItem(jsonLoginData, "request_type")->valueint;
+  loginData->role = cJSON_GetObjectItem(jsonLoginData, "role")->valueint;
   strcpy(loginData->username, cJSON_GetObjectItem(jsonLoginData, "username")->valuestring);
   strcpy(loginData->password, cJSON_GetObjectItem(jsonLoginData, "password")->valuestring);
   strcpy(loginData->token, cJSON_GetObjectItem(jsonLoginData, "token")->valuestring);

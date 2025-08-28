@@ -4,9 +4,9 @@
 #include "agent.h"
 
 typedef struct struct_date{
-    int giorno;
-    int mese;
-    int anno;
+    int day;
+    int month;
+    int year;
 } Date;
 
 typedef enum Priority{

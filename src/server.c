@@ -99,7 +99,7 @@ int getNextTicketId(){
 }
 
 // return role if token is valid, NULL otherwise
-char *authenticate(char *session_token){
+LoginData authenticate(char *session_token){
   FILE *file = fopen(USERS_FILE_ADDRESS, "r");
   flock(fileno(file), LOCK_SH);
 
@@ -113,13 +113,18 @@ char *authenticate(char *session_token){
   free(fileContent);
   fclose(file);
   cJSON *user = NULL;
+  LoginData userData = {0};
   cJSON_ArrayForEach(user, users){
     if(strcmp(cJSON_GetObjectItem(user, "token")->valuestring, session_token)==0){
-      return cJSON_GetObjectItem(user, "role")->valuestring;
+      if(parseJSONToLoginData(user, &userData) == -1){
+        printf("Error parsing json.\n");
+        userData.role = GENERAL_ERROR_CODE;
+      }
+      return userData;
     }
   }
-
-  return NULL;
+  userData.role = GENERAL_ERROR_CODE;
+  return userData;
 }
 
 //Agent availability control function
@@ -237,7 +242,7 @@ void setAgentStatus(char *username, char *status){
 void handleMessage(int clientfd, char *stringMessage){
 
   Message message;
-  char *role;
+  LoginData userData;
   if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
     printf("ERROR: invalid JSON");
     return;
@@ -245,8 +250,8 @@ void handleMessage(int clientfd, char *stringMessage){
 
   // authentication
   if(message.action_code!=LOGIN_REQUEST_MESSAGE_CODE && message.action_code!=SIGNIN_MESSAGE_CODE){
-    role = authenticate(message.session_token);
-    if(role==NULL){
+    userData = authenticate(message.session_token);
+    if(userData.role == GENERAL_ERROR_CODE){
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Invalid session, try logging in.");
       char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
@@ -256,7 +261,6 @@ void handleMessage(int clientfd, char *stringMessage){
       return;
     }
   }
-
   switch (message.action_code)
   {
   case CREATE_TICKET_MESSAGE_CODE:{
@@ -388,11 +392,25 @@ void handleMessage(int clientfd, char *stringMessage){
     }
 
     // token generator
-    srand(time(NULL)); // reset rand()
     char token[SESSION_TOKEN_LENGTH];
-    for( int i = 0; i < SESSION_TOKEN_LENGTH; ++i){
-      token[i] = '!' + rand()%93; // da 33(!) a 125 (})
-    }
+    int isUnique;
+    do
+    {
+      srand(time(NULL)); // reset rand()
+      for( int i = 0; i < SESSION_TOKEN_LENGTH; ++i){
+        token[i] = '!' + rand()%93; // da 33(!) a 125 (})
+      }
+
+      isUnique = 1;
+      cJSON *tempUser = NULL;
+      cJSON_ArrayForEach(tempUser, users){
+        if(strcmp(cJSON_GetObjectItem(tempUser, "token")->valuestring, token)==0){
+          isUnique = 0;
+          break;
+        }
+      }
+    } while (!isUnique);
+    
 
     cJSON_ReplaceItemInObject(user, "token", cJSON_CreateString(token));
     cJSON_ReplaceItemInArray(users, index, user);
@@ -475,6 +493,42 @@ void handleMessage(int clientfd, char *stringMessage){
     char *messageString = cJSON_Print(parseMessageToJSON(&message));
     write(clientfd, messageString, strlen(messageString));
     free(messageString);
+    break;
+  }
+
+  case TICKET_CONSULTATION_MESSAGE_CODE:{
+    FILE *file = fopen(TICKET_FILE_ADDRESS, "r");
+    flock(fileno(file), LOCK_SH);
+
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    cJSON *returnTicketList = cJSON_CreateArray();
+    if(fileSize!=0){
+      char *fileContent = calloc(fileSize+1, sizeof(char));
+      fread(fileContent, 1, fileSize, file);
+
+      cJSON *ticketList = cJSON_Parse(fileContent);
+      free(fileContent);
+      //! CONTROLLO FILE VALIDO
+      cJSON *ticket;
+      //! MAGARI ARRAY STRUCT
+      cJSON_ArrayForEach(ticket, ticketList){
+        if(strcmp(cJSON_GetObjectItem(ticket, "user")->valuestring, userData.username)==0){
+          cJSON_AddItemToArray(returnTicketList, ticket);
+        }
+      }
+    }
+
+
+    message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
+    message.data = returnTicketList;
+    char *responseString = cJSON_Print(parseMessageToJSON(&message));
+    write(clientfd, responseString, strlen(responseString));
+    write(clientfd, "\0", 1);
+    
+    fclose(file);
     break;
   }
 

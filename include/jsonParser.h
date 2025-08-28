@@ -5,8 +5,8 @@
 cJSON *parseTicketToJSON(Ticket *ticket);
 cJSON *parseDateToJSON(Date *date);
 cJSON *parseAgentToJSON(Agent *agent);
-short parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket);
+int parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket);
 cJSON *parseMessageToJSON(Message *message);
-short parseJSONToMessage(cJSON *jsonMessage, Message *message);
+int parseJSONToMessage(cJSON *jsonMessage, Message *message);
 cJSON *parseLoginDataToJSON(LoginData *loginData);
-short parseJSONToLoginData(cJSON *jsonLoginData, LoginData *loginData);
+int parseJSONToLoginData(cJSON *jsonLoginData, LoginData *loginData);
