@@ -82,9 +82,14 @@ void handleMessage(char *stringMessage, char *sessionToken){
   case LOGIN_INFO_MESSAGE_CODE:{
     // char *message = cJSON_GetObjectItem(jsonInData, "message")->valuestring;
     // sessionToken = cJSON_GetObjectItem(jsonInData, "token")->valuestring;
-    LoginData loginData;
-    parseJSONToLoginData(message.data, &loginData);
-    printf("Token: %s\n", loginData.token);
+    if(strlen(message.session_token)!=0){
+      printf("Token: %s\n", message.session_token);
+    }
+    else{
+      printf("%s\n", cJSON_Print(message.data));
+    }
+    
+    
     break;
   }
   
@@ -101,9 +106,9 @@ void handleMessage(char *stringMessage, char *sessionToken){
       printf("Ticket number: %d\n%s\n%s\nPriority: %s\nStatus: %s\nCreated on: %d/%d/%d\nAgent assigned: %s\n", 
         ticket.id, ticket.title, ticket.description, 
         ticket.priority==HIGH? "High":ticket.priority==MEDIUM? "Medium":"Low", 
-        ticket.state==OPEN? "Open":ticket.state==IN_PROGRESS? "In progress":"Closed", 
+        ticket.state==OPEN_STATE? "Open":ticket.state==IN_PROGRESS_STATE? "In progress":"Closed", 
         ticket.date.day, ticket.date.month, ticket.date.year, 
-        ticket.state==OPEN? "No agent assigned":ticket.agent.username);
+        ticket.state==OPEN_STATE? "No agent assigned":ticket.agent);
     }
 
     break;
@@ -148,37 +153,41 @@ int main(int argc, char *argv[]){
   // Ticket ticket;
   // strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
   // strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
-  // ticket.date.giorno = 1;
-  // ticket.date.mese = 1;
-  // ticket.date.anno = 2023;
+  // ticket.date.day = 1;
+  // ticket.date.month = 1;
+  // ticket.date.year = 2023;
   // ticket.priority = MEDIUM;
-  // ticket.state = OPEN;
+  // ticket.state = OPEN_STATE;
   // message.action_code = CREATE_TICKET_MESSAGE_CODE;
   // message.data = parseTicketToJSON(&ticket);
   // strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
 
+  //* RESOLVE TICKET
+  message.action_code = RESOLVE_TICKET_MESSAGE_CODE;
+  strcpy(message.session_token, "WXJ{)#vi3Lo(Hb5{");
+  Ticket ticket = {0};
+  ticket.id = 1;
+  message.data = parseTicketToJSON(&ticket);
+
 
   //* RICHIESTA LOGIN
   // message.action_code = LOGIN_REQUEST_MESSAGE_CODE;
-  // LoginData loginData;
-  // loginData.request_type = LOGIN_REQUEST;
-  // strcpy(loginData.username, "sean");
-  // strcpy(loginData.password, "password");
-  // message.data = parseLoginDataToJSON(&loginData);
+  // User userData;
+  // strcpy(userData.username, "nuovoUsername");
+  // strcpy(userData.password, "passwsord");
+  // message.data = parseUserToJSON(&userData);
 
   // //* SIGN IN
   // message.action_code = SIGNIN_MESSAGE_CODE;
-  // LoginData loginData;
-  // loginData.request_type = SIGNIN_REQUEST;
-  // strcpy(loginData.username, "nuovoUsername");
-  // strcpy(loginData.password, "password");
-  // message.data = parseLoginDataToJSON(&loginData);
+  // User user;
+  // strcpy(user.username, "nuovoUsername");
+  // strcpy(user.password, "password");
+  // message.data = parseUserToJSON(&user);
 
 
-  //* TICKET CONSULTATION
-  message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
-  strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
-
+  // //* TICKET CONSULTATION
+  // message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
+  // strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
 
 
 

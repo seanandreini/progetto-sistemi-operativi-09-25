@@ -23,8 +23,7 @@
 #define USERS_FILE_ADDRESS "./data/users.json"
 #define AGENTS_FILE_ADDRESS "./data/agentList.json"
 
-//! RICORDA DI VEDERE DIMENSIONE ARRAY LETTURA
-
+//! RICORDA DI CAMBIARE IN -1 ERRORE PARSEJSON
 
 
 void saveTicket(cJSON *ticket){
@@ -98,7 +97,7 @@ int getNextTicketId(){
 }
 
 // return role if token is valid, NULL otherwise
-LoginData authenticate(char *session_token){
+User authenticate(char *session_token){
   FILE *file = fopen(USERS_FILE_ADDRESS, "r");
   flock(fileno(file), LOCK_SH);
 
@@ -112,10 +111,10 @@ LoginData authenticate(char *session_token){
   free(fileContent);
   fclose(file);
   cJSON *user = NULL;
-  LoginData userData = {0};
+  User userData = {0};
   cJSON_ArrayForEach(user, users){
     if(strcmp(cJSON_GetObjectItem(user, "token")->valuestring, session_token)==0){
-      if(parseJSONToLoginData(user, &userData) == -1){
+      if(parseJSONToUser(user, &userData) == -1){
         printf("Error parsing json.\n");
         userData.role = GENERAL_ERROR_CODE;
       }
@@ -155,9 +154,9 @@ int isAgentAvailable(char *username){
 
     if(strcmp(agentUsername->valuestring, username)==0){
       cJSON *state = cJSON_GetObjectItem(ticket, "state");
-      //! state->valueint == OPEN NO PERCHE' SIGNIFICA NON E' STATO ASSEGNATO
-      // if(state->valueint == OPEN || state->valueint == IN_PROGRESS){
-      if(state->valueint == IN_PROGRESS){
+      //! state->valueint == OPEN_STATE_STATE NO PERCHE' SIGNIFICA NON E' STATO ASSEGNATO
+      // if(state->valueint == OPEN_STATE_STATE || state->valueint == IN_PROGRESS_STATE){
+      if(state->valueint == IN_PROGRESS_STATE){
         hasOpenTicket = 1;
         break;
       }
@@ -190,19 +189,20 @@ cJSON* loadAvailableAgents(){
   cJSON *agents = cJSON_CreateArray();
   cJSON *user = NULL;
   cJSON_ArrayForEach(user, users){
-    cJSON *status = cJSON_GetObjectItem(user, "status");
+    cJSON *isAvailable = cJSON_GetObjectItem(user, "isAvailable");
     cJSON *role = cJSON_GetObjectItem(user, "role");
 
-    if(role != NULL && status != NULL && strcmp(role->valuestring, "agent")==0 && strcmp(status->valuestring, "available")==0){  
+    if(role != NULL && isAvailable != NULL && 
+      strcmp(role->valuestring, "agent")==0 && isAvailable->valueint){  
       cJSON_AddItemToArray(agents, user); 
     }
   }
-  cJSON_Delete(users);
+  //! cJSON_Delete(users);
 
   return agents;
 }
 
-void setAgentStatus(Agent *agent, int isAvailable){
+void setAgentStatus(char *username, int isAvailable){
   FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
   if(file == NULL){
     printf("Error opening users file.\n");
@@ -224,7 +224,7 @@ void setAgentStatus(Agent *agent, int isAvailable){
 
   cJSON *user = NULL;
   cJSON_ArrayForEach(user, users){
-    if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, agent->username)==0){    
+    if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, username)==0){    
       cJSON_ReplaceItemInObject(user, "isAvailable", cJSON_CreateNumber(isAvailable));
       break;
     }
@@ -280,7 +280,7 @@ int findBestOpenTicket(Ticket *bestTicket){
 
   cJSON *bestTicketJSON = NULL;
   cJSON_ArrayForEach(bestTicketJSON, ticketList){
-    if(cJSON_GetObjectItem(bestTicketJSON, "state")->valueint == OPEN){
+    if(cJSON_GetObjectItem(bestTicketJSON, "state")->valueint == OPEN_STATE){
       cJSON *currentPriority = cJSON_GetObjectItem(bestTicketJSON, "priority");
       cJSON *currentDateJSON = cJSON_GetObjectItem(bestTicketJSON, "date");
       Date currentDate;
@@ -355,19 +355,19 @@ int updateTicket(int ticketId, cJSON *updatesJSON){ //updatesJSON is an object w
 }
 
 //assign an available agent to a ticket already created 
-void assignTicketToAgent(int ticketId, Agent *agent){
-  cJSON *agentJSON = parseAgentToJSON(agent);
+void assignTicketToAgent(int ticketId, User *agent){
+  // cJSON *agentJSON = parseUserToJSON(agent);
   cJSON *updates = cJSON_CreateObject();
-  cJSON_AddItemToObject(updates, "agent", agentJSON);
-  cJSON_AddNumberToObject(updates, "state", IN_PROGRESS);
+  cJSON_AddStringToObject(updates, "agent", agent->username);
+  cJSON_AddNumberToObject(updates, "state", IN_PROGRESS_STATE);
   if(updateTicket(ticketId, updates)){
-    setAgentStatus(agent, 0); // set agent to busy
-    printf("Ticket %d assigned to agent %s and state set to IN_PROGRESS.\n", ticketId, agent->username);
+    setAgentStatus(agent->username, 0); // set agent to busy
+    printf("Ticket %d assigned to agent %s and state set to IN_PROGRESS_STATE.\n", ticketId, agent->username);
   }
   else{
     printf("Error: Ticket %d not found.\n", ticketId);
   }
-  cJSON_Delete(updates);
+  //!cJSON_Delete(updates);
 }
 
 int getTicketById(int ticketId, Ticket *ticket){
@@ -389,35 +389,38 @@ int getTicketById(int ticketId, Ticket *ticket){
     return 0; // no tickets
   }
 
-  char *fileContent = malloc(fileSize + 1);
+  char *fileContent = calloc(fileSize+1, sizeof(char));
   fread(fileContent, 1, fileSize, file);
-  fileContent[fileSize] = '\0';
   fclose(file);
 
   cJSON *ticketList = cJSON_Parse(fileContent);
-  free (fileContent);
+  free(fileContent);
+
+  printf("prova");
 
   cJSON *ticketJSON = NULL;
   cJSON_ArrayForEach(ticketJSON, ticketList){
+    printf("ticket: %d\n", ticketId);
     if(cJSON_GetObjectItem(ticketJSON, "id")->valueint == ticketId){
-      if(parseJSONToTicket(ticketJSON, ticket)){
-        found = 1;
-        break;
-      }
+      found = 1;
+      break;
     }
   }
-  cJSON_Delete(ticketList);
+
+  printf("found%d\n", found);
+  //!cJSON_Delete(ticketList);
   return found;
 }
 
 void handleMessage(int clientfd, char *stringMessage){
+  Message message = {0};
+  User userData = {0};
 
-  Message message;
-  LoginData userData;
   if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
     printf("ERROR: invalid JSON");
     return;
   }
+
 
   // authentication
   if(message.action_code!=LOGIN_REQUEST_MESSAGE_CODE && message.action_code!=SIGNIN_MESSAGE_CODE){
@@ -442,10 +445,10 @@ void handleMessage(int clientfd, char *stringMessage){
       return;
     }
 
-    cJSON_Delete(message.data); 
+    strcpy(ticket.user, userData.username);
     
     int agentWasAssigned = 0;
-    Agent assignedAgent;
+    User assignedAgent;
 
     cJSON *availableAgents = loadAvailableAgents();
     int agentsCount = cJSON_GetArraySize(availableAgents);
@@ -456,39 +459,55 @@ void handleMessage(int clientfd, char *stringMessage){
       cJSON *agentJSON = cJSON_GetArrayItem(availableAgents, nextAgentIndex % agentsCount);
       nextAgentIndex++;
 
-      if(parseJSONToAgent(agentJSON, &assignedAgent)){
-        agentWasAssigned = 1;
-        printf("Agent %s assigned to ticket.\n", assignedAgent.username);
-        ticket.state = IN_PROGRESS;
-        ticket.agent = assignedAgent;
+
+      if(!parseJSONToUser(agentJSON, &assignedAgent)){
+        printf("Error parsing agent json.\n");
+        return;
       }
+
+      agentWasAssigned = 1;
+      printf("Agent %s assigned to ticket.\n", assignedAgent.username);
+      ticket.state = IN_PROGRESS_STATE;
+      strcpy(ticket.agent, assignedAgent.username);
     }
 
     if(!agentWasAssigned){
-      printf("No available agents, ticket will be created with OPEN status.\n");
-      ticket.state = OPEN;
-      ticket.agent.code = -1;
-      strcpy(ticket.agent.username, "N/A"); // no agent assigned
+      printf("No available agents, ticket will be created with OPEN_STATE status.\n");
+      ticket.state = OPEN_STATE;
+      strcpy(ticket.agent, "N/A"); // no agent assigned
     }
-    cJSON_Delete(availableAgents);
+    //!cJSON_Delete(availableAgents);
+
     ticket.id = getNextTicketId();
     cJSON *jsonTicket = parseTicketToJSON(&ticket);
     saveTicket(jsonTicket);
-    cJSON_Delete(jsonTicket);
+    //! cJSON_Delete(jsonTicket);
 
+
+    //! RICORDA DI DECIDERE LOGICA RIDONDANZA ISAVAILABLE
     if(agentWasAssigned){
       setAgentStatus(assignedAgent.username, 0);
       printf("Agent %s status set to busy.\n", assignedAgent.username);
     }
 
-    // ??send response to client??
+    message.action_code = INFO_MESSAGE_CODE;
+    char *base = "Ticket created successfully, your ticket code is ";
+    int fullStringLength = snprintf(NULL, 0, "%s%d", base, ticket.id);
+    char *fullString = malloc(fullStringLength+1);
+    snprintf(fullString, fullStringLength+1, "%s%d.", base, ticket.id);
+    message.data = cJSON_CreateString(fullString);
+    
+    char *response = cJSON_Print(parseMessageToJSON(&message));
+    write(clientfd, response, strlen(response));
+    write(clientfd, "\0", 1);
+
     break;
   }
   
-  case LOGIN_REQUEST_MESSAGE_CODE:{
-    LoginData loginData;
-    
-    if(!parseJSONToLoginData(message.data, &loginData)){
+  case LOGIN_REQUEST_MESSAGE_CODE:{    
+    User userData = {0};
+
+    if(!parseJSONToUser(message.data, &userData)){
       printf("ERROR: invalid json.\n");
       break;
     }
@@ -513,17 +532,17 @@ void handleMessage(int clientfd, char *stringMessage){
       free(fileContent);
       
       cJSON_ArrayForEach(user, users){
-        if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, loginData.username)==0){
+        if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, userData.username)==0){
           found = 1;
           index++;
           break;
         }
       }
       if(found){
-        if(strcasecmp(cJSON_GetObjectItem(user, "password")->valuestring, loginData.password)!=0){
+        if(strcasecmp(cJSON_GetObjectItem(user, "password")->valuestring, userData.password)!=0){
 
           message.action_code = INFO_MESSAGE_CODE;
-          message.data = cJSON_CreateString("Invalid Password.\n");
+          message.data = cJSON_CreateString("Invalid Password.");
 
           char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
 
@@ -552,11 +571,10 @@ void handleMessage(int clientfd, char *stringMessage){
         
       }
     }
-    fclose(file);
     
     if(!found){
       message.action_code = INFO_MESSAGE_CODE;
-      message.data = cJSON_CreateString("Invalid username.\n");
+      message.data = cJSON_CreateString("Invalid username.");
       char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
@@ -591,13 +609,13 @@ void handleMessage(int clientfd, char *stringMessage){
     fseek(file, 0, SEEK_SET);
     fileContent = cJSON_Print(users);
     fwrite(fileContent, 1, strlen(fileContent), file);
-    
-    loginData.request_type = LOGIN_SUCCESSFUL_RESPONSE;
-    strcpy(loginData.password, ""); // delete password for safety
-    strncpy(loginData.token, token, SESSION_TOKEN_LENGTH+1);
+    fclose(file);
+
+    strcpy(userData.password, ""); // delete password for safety
+    strcpy(message.session_token, token);
 
     message.action_code = LOGIN_INFO_MESSAGE_CODE;
-    message.data = parseLoginDataToJSON(&loginData);
+    message.data = parseUserToJSON(&userData);
     char *responseString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
 
     write(clientfd, responseString, strlen(responseString));
@@ -607,9 +625,9 @@ void handleMessage(int clientfd, char *stringMessage){
   }
 
   case SIGNIN_MESSAGE_CODE:{
-    LoginData loginData;
-    if(!parseJSONToLoginData(message.data, &loginData)){
-      printf("Error parsing json.\n");
+    User userData = {0};
+    if(!parseJSONToUser(message.data, &userData)){
+      printf("Error parsing user from message data.\n");
       break;
     }
 
@@ -619,43 +637,51 @@ void handleMessage(int clientfd, char *stringMessage){
     fseek(file, 0, SEEK_END);
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
-    char *fileContent = calloc(fileSize+1, sizeof(char));
-    fread(fileContent, 1, fileSize, file);
-    
-    cJSON *users = cJSON_Parse(fileContent);
-    free(fileContent);
-    if(users == NULL){
-      printf("Error parsing users file.\n");
-      cJSON_Delete(users);
-      fclose(file);
-      break;
-    }
 
-    cJSON *user = NULL;
+    cJSON *fileUsers = cJSON_CreateArray();
 
-    cJSON_ArrayForEach(user, users){
-      if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, loginData.username)==0){
-        message.action_code = INFO_MESSAGE_CODE;
-        message.data = cJSON_CreateString("The username is already taken.");
-        char *messageString = cJSON_Print(parseMessageToJSON(&message));
-        write(clientfd, messageString, strlen(messageString));
-        free(messageString);
-        return;
+    if(fileSize!=0){
+      char *fileContent = calloc(fileSize+1, sizeof(char));
+      fread(fileContent, 1, fileSize, file);
+      fileUsers = cJSON_Parse(fileContent);
+      free(fileContent);
+
+      if(fileUsers == NULL){
+        printf("Error parsing users file.\n");
+        cJSON_Delete(fileUsers);
+        fclose(file);
+        break;
+      }
+  
+      cJSON *fileUser = NULL;
+  
+      cJSON_ArrayForEach(fileUser, fileUsers){
+        if(strcmp(cJSON_GetObjectItem(fileUser, "username")->valuestring, userData.username)==0){
+          message.action_code = INFO_MESSAGE_CODE;
+          message.data = cJSON_CreateString("The username is already taken.");
+          char *messageString = cJSON_Print(parseMessageToJSON(&message));
+          write(clientfd, messageString, strlen(messageString));
+          free(messageString);
+          return;
+        }
       }
     }
 
     //! STRUCT
-    user = cJSON_CreateObject();
-    cJSON_AddStringToObject(user, "role", "user");
-    cJSON_AddStringToObject(user, "username", loginData.username);
-    cJSON_AddStringToObject(user, "password", loginData.password);
-    cJSON_AddStringToObject(user, "token", "");
+    
+    // user = cJSON_CreateObject();
+    // cJSON_AddStringToObject(user, "role", "user");
+    // cJSON_AddStringToObject(user, "username", loginData.username);
+    // cJSON_AddStringToObject(user, "password", loginData.password);
+    // cJSON_AddStringToObject(user, "token", "");
+    userData.role = USER_ROLE;
+    userData.isAvailable = -1;
 
-    cJSON_AddItemToArray(users, user);
+    cJSON_AddItemToArray(fileUsers, parseUserToJSON(&userData));
 
     ftruncate(fileno(file), 0);
     fseek(file, 0, SEEK_SET);
-    char *newFileContent = cJSON_Print(users);
+    char *newFileContent = cJSON_Print(fileUsers);
     fwrite(newFileContent, 1, strlen(newFileContent), file);
     fclose(file);
     free(newFileContent);
@@ -704,8 +730,8 @@ void handleMessage(int clientfd, char *stringMessage){
     break;
   }
 
-  case RESOLVE_TICKET_CODE:{
-    if(strcmp(userData.role, "agent")!=0){
+  case RESOLVE_TICKET_MESSAGE_CODE:{
+    if(userData.role!=AGENT_ROLE){
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Only agents can resolve tickets.");
       char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
@@ -715,10 +741,12 @@ void handleMessage(int clientfd, char *stringMessage){
       break;
     }
 
-    int ticketId = cJSON_GetObjectItem(message.data, "ticket_id")->valueint;
-    Ticket ticketToClose;
+    Ticket ticket = {0};
+    //! RIMASTO A PARSARE STO ROBO, AGGIUNGI CONTROLLO ERRORE, NON ANCORA TESTATO
+    parseJSONToTicket(message.data, &ticket);
+    
 
-    if(!getTicketById(ticketId, &ticketToClose)){
+    if(!getTicketById(ticket.id, &ticket)){
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Ticket not found.");
       char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
@@ -728,7 +756,7 @@ void handleMessage(int clientfd, char *stringMessage){
       break;
     }
 
-    if(strcmp(userData.username, ticketToClose.agent.username)!=0){
+    if(strcmp(userData.username, ticket.agent)!=0){
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("You can only resolve tickets assigned to you.");
       char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
@@ -739,21 +767,21 @@ void handleMessage(int clientfd, char *stringMessage){
     }
 
     cJSON *stateUpdate = cJSON_CreateObject();
-    cJSON_AddNumberToObject(stateUpdate, "state", CLOSED);
-    updateTicket(ticketId, stateUpdate);
-    cJSON_Delete(stateUpdate);
-    printf("Ticket %d resolved by agent %s.\n", ticketId, userData.username);
+    cJSON_AddNumberToObject(stateUpdate, "state", CLOSED_STATE);
+    updateTicket(ticket.id, stateUpdate);
+    //!cJSON_Delete(stateUpdate);
+    printf("Ticket %d resolved by agent %s.\n", ticket.id, userData.username);
 
     Ticket nextTicket;
     if(findBestOpenTicket(&nextTicket)){
       assignTicketToAgent(nextTicket.id, &userData);
     }
     else{
-      setAgentStatus(&userData, 1); // set agent to available
+      setAgentStatus(userData.username, 1); // set agent to available
       printf("No open tickets available. Agent %s set to available.\n", userData.username);
     }
     
-    cJSON_Delete(message.data);
+    //!cJSON_Delete(message.data);
     message.action_code = INFO_MESSAGE_CODE;
     message.data = cJSON_CreateString("Ticket resolved successfully.");
     char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
@@ -764,8 +792,8 @@ void handleMessage(int clientfd, char *stringMessage){
     break;
   }
 
-  case UPDATE_TICKET_CODE:{
-    if(strcmp(userData.role, "admin")!=0){
+  case UPDATE_TICKET_MESSAGE_CODE:{
+    if(userData.role != ADMIN_ROLE){
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Only admins can update tickets.");
       char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
@@ -880,10 +908,10 @@ int main(int argc, char *argv[]){
         printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
         
         //lettura messaggio dal client e stampa
-        char message[256]= {0};
-        readMessage(clientfd, message);
-        // printf("Received from client n.%d: %s", clientfd, message);
-        handleMessage(clientfd, message);
+        char receivedMessage[256]= {0};
+        readMessage(clientfd, receivedMessage);
+        // printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
+        handleMessage(clientfd, receivedMessage);
         close(clientfd);
         printf("Connection closed.\n");
         exit(0); // terminate child process
