@@ -634,8 +634,8 @@ int handleMessage(int clientfd, char *stringMessage){
   }
 
   case SIGNUP_MESSAGE_CODE:{
-    User userData = {0};
-    if(!parseJSONToUser(message.data, &userData)){
+    User user = {0};
+    if(!parseJSONToUser(message.data, &user)){
       printf("Error parsing user from message data.\n");
       return -1;
     }
@@ -665,7 +665,7 @@ int handleMessage(int clientfd, char *stringMessage){
       cJSON *fileUser = NULL;
   
       cJSON_ArrayForEach(fileUser, fileUsers){
-        if(strcmp(cJSON_GetObjectItem(fileUser, "username")->valuestring, userData.username)==0){
+        if(strcmp(cJSON_GetObjectItem(fileUser, "username")->valuestring, user.username)==0){
           message.action_code = INFO_MESSAGE_CODE;
           message.data = cJSON_CreateString("The username is already taken.");
           char *messageString = cJSON_Print(parseMessageToJSON(&message));
