@@ -166,7 +166,7 @@ int main(int argc, char *argv[]){
   message.action_code = RESOLVE_TICKET_MESSAGE_CODE;
   strcpy(message.session_token, "WXJ{)#vi3Lo(Hb5{");
   Ticket ticket = {0};
-  ticket.id = 1;
+  ticket.id = 2;
   message.data = parseTicketToJSON(&ticket);
 
 

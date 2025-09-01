@@ -396,18 +396,19 @@ int getTicketById(int ticketId, Ticket *ticket){
   cJSON *ticketList = cJSON_Parse(fileContent);
   free(fileContent);
 
-  printf("prova");
-
   cJSON *ticketJSON = NULL;
   cJSON_ArrayForEach(ticketJSON, ticketList){
-    printf("ticket: %d\n", ticketId);
     if(cJSON_GetObjectItem(ticketJSON, "id")->valueint == ticketId){
+      if(!parseJSONToTicket(ticketJSON, ticket)){
+        printf("Error parsing ticket json.\n");
+        //! SI POTREBBE AGGIUNGERE CONTROLLO ERRORE
+        return 0;
+      }
       found = 1;
       break;
     }
   }
 
-  printf("found%d\n", found);
   //!cJSON_Delete(ticketList);
   return found;
 }
@@ -731,6 +732,9 @@ void handleMessage(int clientfd, char *stringMessage){
   }
 
   case RESOLVE_TICKET_MESSAGE_CODE:{
+    //! aggiungi altri commenti così
+    printf("Request received: resolve ticket by user %s.\n", userData.username);
+
     if(userData.role!=AGENT_ROLE){
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Only agents can resolve tickets.");
@@ -743,12 +747,24 @@ void handleMessage(int clientfd, char *stringMessage){
 
     Ticket ticket = {0};
     //! RIMASTO A PARSARE STO ROBO, AGGIUNGI CONTROLLO ERRORE, NON ANCORA TESTATO
-    parseJSONToTicket(message.data, &ticket);
-    
+    if(!parseJSONToTicket(message.data, &ticket)){
+      printf("Error parsing ticket json.\n");
+      return;
+    }    
 
     if(!getTicketById(ticket.id, &ticket)){
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Ticket not found.");
+      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      write(clientfd, responseMessage, strlen(responseMessage));
+      write(clientfd, "\0", 1);
+      free(responseMessage);
+      break;
+    }
+
+    if(ticket.state!=IN_PROGRESS_STATE){
+      message.action_code = INFO_MESSAGE_CODE;
+      message.data = cJSON_CreateString("You can only resolve tickets which are 'in progress'.");
       char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
