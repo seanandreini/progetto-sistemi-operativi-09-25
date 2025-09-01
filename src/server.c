@@ -413,18 +413,24 @@ int getTicketById(int ticketId, Ticket *ticket){
   return found;
 }
 
-void handleMessage(int clientfd, char *stringMessage){
+// returns -1 if there's an error, 0 if client has closed the connection, 1 otherwise
+int handleMessage(int clientfd, char *stringMessage){
   Message message = {0};
   User userData = {0};
 
   if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
     printf("ERROR: invalid JSON");
-    return;
+    return -1;
+  }
+
+  if(message.action_code == CLOSE_CONNECTION_MESSAGE_CODE){
+    printf("Client has closed the connection.\n");
+    return 0;
   }
 
 
   // authentication
-  if(message.action_code!=LOGIN_REQUEST_MESSAGE_CODE && message.action_code!=SIGNIN_MESSAGE_CODE){
+  if(message.action_code!=LOGIN_REQUEST_MESSAGE_CODE && message.action_code!=SIGNUP_MESSAGE_CODE){
     userData = authenticate(message.session_token);
     if(userData.role == GENERAL_ERROR_CODE){
       message.action_code = INFO_MESSAGE_CODE;
@@ -433,7 +439,7 @@ void handleMessage(int clientfd, char *stringMessage){
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
-      return;
+      return 1; // not an error server-side
     }
   }
   switch (message.action_code)
@@ -443,7 +449,7 @@ void handleMessage(int clientfd, char *stringMessage){
     Ticket ticket;
     if(!parseJSONToTicket(message.data, &ticket)){
       printf("ERROR: invalid json\n");
-      return;
+      return -1;
     }
 
     strcpy(ticket.user, userData.username);
@@ -463,7 +469,7 @@ void handleMessage(int clientfd, char *stringMessage){
 
       if(!parseJSONToUser(agentJSON, &assignedAgent)){
         printf("Error parsing agent json.\n");
-        return;
+        return -1;
       }
 
       agentWasAssigned = 1;
@@ -510,7 +516,7 @@ void handleMessage(int clientfd, char *stringMessage){
 
     if(!parseJSONToUser(message.data, &userData)){
       printf("ERROR: invalid json.\n");
-      break;
+      return -1;
     }
 
     FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
@@ -552,7 +558,7 @@ void handleMessage(int clientfd, char *stringMessage){
 
           free(responseMessage);
           fclose(file);
-          break;
+          return 1;
         }
 
 
@@ -579,7 +585,9 @@ void handleMessage(int clientfd, char *stringMessage){
       char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
-      break;
+      free(responseMessage);
+      fclose(file);
+      return -1;
     }
 
     // token generator
@@ -625,11 +633,11 @@ void handleMessage(int clientfd, char *stringMessage){
     break;
   }
 
-  case SIGNIN_MESSAGE_CODE:{
+  case SIGNUP_MESSAGE_CODE:{
     User userData = {0};
     if(!parseJSONToUser(message.data, &userData)){
       printf("Error parsing user from message data.\n");
-      break;
+      return -1;
     }
 
     FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
@@ -651,7 +659,7 @@ void handleMessage(int clientfd, char *stringMessage){
         printf("Error parsing users file.\n");
         cJSON_Delete(fileUsers);
         fclose(file);
-        break;
+        return -1;
       }
   
       cJSON *fileUser = NULL;
@@ -663,18 +671,11 @@ void handleMessage(int clientfd, char *stringMessage){
           char *messageString = cJSON_Print(parseMessageToJSON(&message));
           write(clientfd, messageString, strlen(messageString));
           free(messageString);
-          return;
+          return 0; // not an error server-side
         }
       }
     }
 
-    //! STRUCT
-    
-    // user = cJSON_CreateObject();
-    // cJSON_AddStringToObject(user, "role", "user");
-    // cJSON_AddStringToObject(user, "username", loginData.username);
-    // cJSON_AddStringToObject(user, "password", loginData.password);
-    // cJSON_AddStringToObject(user, "token", "");
     userData.role = USER_ROLE;
     userData.isAvailable = -1;
 
@@ -742,14 +743,14 @@ void handleMessage(int clientfd, char *stringMessage){
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
-      break;
+      return 0; // not an error server-side
     }
 
     Ticket ticket = {0};
     //! RIMASTO A PARSARE STO ROBO, AGGIUNGI CONTROLLO ERRORE, NON ANCORA TESTATO
     if(!parseJSONToTicket(message.data, &ticket)){
       printf("Error parsing ticket json.\n");
-      return;
+      return -1;
     }    
 
     if(!getTicketById(ticket.id, &ticket)){
@@ -759,7 +760,7 @@ void handleMessage(int clientfd, char *stringMessage){
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
-      break;
+      break; // not an error server-side
     }
 
     if(ticket.state!=IN_PROGRESS_STATE){
@@ -769,7 +770,7 @@ void handleMessage(int clientfd, char *stringMessage){
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
-      break;
+      break; // not an error server-side
     }
 
     if(strcmp(userData.username, ticket.agent)!=0){
@@ -779,7 +780,7 @@ void handleMessage(int clientfd, char *stringMessage){
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
-      break;
+      break; // not an error server-side
     }
 
     cJSON *stateUpdate = cJSON_CreateObject();
@@ -816,7 +817,7 @@ void handleMessage(int clientfd, char *stringMessage){
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
-      break;
+      break; // not an error server-side
     }
 
     int ticketId = cJSON_GetObjectItem(message.data, "ticket_id")->valueint;
@@ -854,6 +855,7 @@ void handleMessage(int clientfd, char *stringMessage){
     break;
   }
 
+  return 1;
 }
 
 int main(int argc, char *argv[]){
@@ -923,11 +925,13 @@ int main(int argc, char *argv[]){
 
         printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
         
-        //lettura messaggio dal client e stampa
-        char receivedMessage[256]= {0};
-        readMessage(clientfd, receivedMessage);
-        // printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
-        handleMessage(clientfd, receivedMessage);
+        while(1){
+          //lettura messaggio dal client e stampa
+          char receivedMessage[256]= {0};
+          if(readMessage(clientfd, receivedMessage)==0) break; // connection interrupted abnormally by client
+          // printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
+          if(handleMessage(clientfd, receivedMessage) == 0) break;
+        }
         close(clientfd);
         printf("Connection closed.\n");
         exit(0); // terminate child process

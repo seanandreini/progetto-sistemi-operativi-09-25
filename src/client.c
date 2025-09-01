@@ -63,10 +63,10 @@ Ticket createTicket() {
 
 
 // message interpretation
-void handleMessage(char *stringMessage, char *sessionToken){
-  Message message;
+void handleMessage(char *stringMessage, User *userData){
+  Message message = {0};
   if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
-    printf("No response received.\n");
+    printf("Invalid json response.\n");
     return;
   }
 
@@ -145,63 +145,139 @@ int main(int argc, char *argv[]){
   printf("Connected to server at %s:%d\n", SERVER_ADDRESS, SERVER_PORT);
 
 
-  char sessionToken[SESSION_TOKEN_LENGTH];
-  Message message;
+  // char sessionToken[SESSION_TOKEN_LENGTH];
+  
 
 
-  // //* CREAZIONE TICKET 
-  // Ticket ticket;
-  // strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
-  // strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
-  // ticket.date.day = 1;
-  // ticket.date.month = 1;
-  // ticket.date.year = 2023;
-  // ticket.priority = MEDIUM;
-  // ticket.state = OPEN_STATE;
-  // message.action_code = CREATE_TICKET_MESSAGE_CODE;
-  // message.data = parseTicketToJSON(&ticket);
-  // strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+  
 
-  //* RESOLVE TICKET
-  message.action_code = RESOLVE_TICKET_MESSAGE_CODE;
-  strcpy(message.session_token, "WXJ{)#vi3Lo(Hb5{");
-  Ticket ticket = {0};
-  ticket.id = 2;
-  message.data = parseTicketToJSON(&ticket);
+  
 
 
-  //* RICHIESTA LOGIN
-  // message.action_code = LOGIN_REQUEST_MESSAGE_CODE;
-  // User userData;
-  // strcpy(userData.username, "nuovoUsername");
-  // strcpy(userData.password, "passwsord");
-  // message.data = parseUserToJSON(&userData);
+  
 
-  // //* SIGN IN
-  // message.action_code = SIGNIN_MESSAGE_CODE;
-  // User user;
-  // strcpy(user.username, "nuovoUsername");
-  // strcpy(user.password, "password");
-  // message.data = parseUserToJSON(&user);
+  
 
 
-  // //* TICKET CONSULTATION
-  // message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
-  // strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+  
 
 
 
-  //* writing to server
-  char *stringMessage = cJSON_Print(parseMessageToJSON(&message));
-  write(clientfd, stringMessage, strlen(stringMessage));
-  write(clientfd, "\0", 1);
-  printf("Message sent to server.\n");
 
-  //* client receiving
-  char receivedMessage[256]= {0};
-  readMessage(clientfd, receivedMessage);
-  // printf("received %s\n", receivedMessage);
-  handleMessage(receivedMessage, sessionToken);
+  int keepGoing = 1;
+  User userData = {0};
+  while (keepGoing)
+  {
+    //! si potrebbe mettere un print diverso in base al ruolo dopo il login
+    //! guardare se pulire console
+    Message message = {0};
+    int operation;
+
+    printf("Select operation:\n"
+      "1: Sign Up\n"
+      "2: Sign In\n"
+      "3: Create ticket\n"
+      "4: View your tickets\n"
+      "5: Release ticket\n"
+      "0: Log out\n");
+    
+    scanf("%d", &operation);
+
+    switch(operation){
+      case 1:{
+        //* SIGN UP
+        message.action_code = SIGNUP_MESSAGE_CODE;
+        User user;
+        strcpy(user.username, "nuovoUsername");
+        strcpy(user.password, "password");
+        message.data = parseUserToJSON(&user);
+        break;
+      }
+      case 2:{
+        //* SIGN IN
+        message.action_code = LOGIN_REQUEST_MESSAGE_CODE;
+        User user;
+        strcpy(user.username, "nuovoUsername");
+        strcpy(user.password, "passwsord");
+        message.data = parseUserToJSON(&user);
+        break;
+      }
+      case 3:{
+        //* CREAZIONE TICKET 
+        Ticket ticket;
+        strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
+        strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
+        ticket.date.day = 1;
+        ticket.date.month = 1;
+        ticket.date.year = 2023;
+        ticket.priority = MEDIUM;
+        ticket.state = OPEN_STATE;
+        message.action_code = CREATE_TICKET_MESSAGE_CODE;
+        message.data = parseTicketToJSON(&ticket);
+        strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+        break;
+      }
+      case 4:{
+        //* TICKET CONSULTATION
+        message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
+        strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+        break;
+      }
+      case 5:{
+        //* RESOLVE TICKET
+        message.action_code = RESOLVE_TICKET_MESSAGE_CODE;
+        strcpy(message.session_token, "WXJ{)#vi3Lo(Hb5{");
+        Ticket ticket = {0};
+        ticket.id = 2;
+        message.data = parseTicketToJSON(&ticket);
+        break;
+      }
+      case 0:{
+        //* EXIT
+        keepGoing = 0;
+        message.action_code = CLOSE_CONNECTION_MESSAGE_CODE;
+        message.data = cJSON_CreateString("");
+        strcpy(message.session_token, "WXJ{)#vi3Lo(Hb5{");
+        break;
+      }
+
+      default:{
+        printf("Invalid operation.\n");
+        continue;
+      }
+    }
+
+    //* writing to server
+    char *stringMessage = cJSON_Print(parseMessageToJSON(&message));
+    write(clientfd, stringMessage, strlen(stringMessage));
+    write(clientfd, "\0", 1);
+    printf("Message sent to server.\n");
+    free(stringMessage);
+
+    //* client receiving
+    char receivedMessage[256]= {0};
+    if(readMessage(clientfd, receivedMessage)==0){
+      printf("The server has crashed. Try again in a while.\n");
+      break;
+    }
+    // printf("received %s\n", receivedMessage);
+    handleMessage(receivedMessage, &userData);
+  }
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
 
 
 
