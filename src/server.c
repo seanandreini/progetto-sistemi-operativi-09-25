@@ -13,6 +13,8 @@
 #include <time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
 #include "../include/functions.h"
@@ -439,6 +441,13 @@ int handleMessage(int clientfd, char *stringMessage){
         printf("ERROR: invalid json\n");
         return -1;
       }
+
+    //server use actual date for ticket date
+    time_t actualTime = time(NULL);
+    struct tm *timeInfo = localtime(&actualTime);
+    ticket.date.day = timeInfo->tm_mday;
+    ticket.date.month = timeInfo->tm_mon + 1; // tm_mon is 0-11
+    ticket.date.year = timeInfo->tm_year + 1900; // tm_year is years since 1900
 
       strcpy(ticket.user, userData.username);
       
@@ -875,6 +884,91 @@ int handleMessage(int clientfd, char *stringMessage){
       }
       return -1;
     }
+
+    case CREATE_AGENT_MESSAGE_CODE:{
+    //the user must be an admin
+    if(userData.role != ADMIN_ROLE){
+      message.action_code = INFO_MESSAGE_CODE;
+      message.data = cJSON_CreateString("Only admins can create agents.");
+      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      write(clientfd, responseMessage, strlen(responseMessage));
+      write(clientfd, "\0", 1);
+      free(responseMessage);
+      break; // not an error server-side
+    }
+
+    User newAgent = {0};
+    if(!parseJSONToUser(message.data, &newAgent)){
+      printf("Error parsing user from message data.\n");
+      return -1;
+    }
+
+    newAgent.role = AGENT_ROLE; // force role to agent
+
+    FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
+    flock(fileno(file), LOCK_EX);
+
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    //control if username is already taken
+    cJSON *fileUsers = cJSON_CreateArray();
+
+    //load existing users
+    if(fileSize>0){
+      char *fileContent = calloc(fileSize+1, sizeof(char));
+      fread(fileContent, 1, fileSize, file);
+      fileUsers = cJSON_Parse(fileContent);
+      free(fileContent);
+      if(fileUsers == NULL){
+        printf("Error parsing users file.\n");
+        cJSON_Delete(fileUsers);
+        fclose(file);
+        return -1;
+      }
+    }
+
+    // check username uniqueness
+    int usernameTaken = 0;
+    cJSON *user = NULL;
+    cJSON_ArrayForEach(user, fileUsers){
+      if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, newAgent.username)==0){
+        usernameTaken = 1;
+        break;
+      }
+    }
+
+    if(usernameTaken){
+      message.action_code = INFO_MESSAGE_CODE;
+      message.data = cJSON_CreateString("The username is already taken.");
+      
+    }else{
+      newAgent.isAvailable = 1; // new agents are available by default
+      cJSON_AddItemToArray(fileUsers, parseUserToJSON(&newAgent));
+
+      ftruncate(fileno(file), 0);
+      fseek(file, 0, SEEK_SET);
+      char *newFileContent = cJSON_Print(fileUsers);
+      fwrite(newFileContent, 1, strlen(newFileContent), file);
+      free(newFileContent);
+
+      message.action_code = INFO_MESSAGE_CODE;
+      message.data = cJSON_CreateString("Agent created successfully.");
+      
+    }
+
+    char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+    write(clientfd, responseMessage, strlen(responseMessage));
+    write(clientfd, "\0", 1);
+    free(responseMessage);
+
+    cJSON_Delete(fileUsers);
+    fclose(file);
+
+    break; 
+
+  }
 
     default:{
       

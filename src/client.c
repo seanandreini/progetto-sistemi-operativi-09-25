@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <time.h>
 #include "../include/ticket.h"
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
@@ -18,31 +19,42 @@
 #define SERVER_ADDRESS "127.0.0.1"
 
 //! USARE FGETS INVECE CHE SCANF O PULIRE IL BUFFER
+//! Alcune volte si usa italiano altre inglese, forse meglio se lo fai te che il mio inglese... -_- !
 
 Ticket createTicket() {
-  Ticket t;
+  Ticket ticket;
   int goodInput = 0;
 
   printf("Inserisci i dati del ticket:\n");
   printf("Titolo:\n");
-  fgets(t.title, sizeof(t.title), stdin); 
+  fgets(ticket.title, sizeof(ticket.title), stdin); 
+  ticket.title[strcspn(ticket.title, "\n")] = 0; // remove newline character
+
   printf("descrizione:\n");
-  fgets(t.description, sizeof(t.description), stdin);
+  fgets(ticket.description, sizeof(ticket.description), stdin);
+  ticket.description[strcspn(ticket.description, "\n")] = 0; // remove newline character
 
-  //TODO: inserire logica controllo data
-  printf("Data (gg/mm/aaaa):\n");
-  scanf("%d/%d/%d", &t.date.day, &t.date.month, &t.date.year);
+  time_t t = time(NULL);
+  struct tm tm = *localtime(&t);
+  int currentDay = tm.tm_mday;
+  int currentMonth = tm.tm_mon + 1; // tm_mon is 0-11
+  int currentYear = tm.tm_year + 1900; // tm_year is years since 1900
 
+  //la data viene impostata automaticamente a quella corrente al momento della creazione del ticket nel server
+
+  goodInput = 0; // reset for next input
+  
   while(!goodInput) {
     int temp_priority;
     printf("Priorità (1: Bassa, 2: Media, 3: Alta):\n");
     scanf("%d", &temp_priority);
-    if (t.priority < MIN_PRIORITY || t.priority > MAX_PRIORITY) {
+    while(getchar() != '\n'); // clear input buffer
+    if (temp_priority < MIN_PRIORITY || temp_priority > MAX_PRIORITY) {
       printf("Priorità non valida, riprova.\n");
       continue;
     }
     goodInput = 1;
-    t.priority = temp_priority; 
+    ticket.priority = temp_priority; 
   }
 
   goodInput = 0;
@@ -50,17 +62,77 @@ Ticket createTicket() {
     int temp_state;
     printf("Stato (1: Aperto, 2: In Corso, 3: Chiuso):\n");
     scanf("%d", &temp_state);
+    while(getchar() != '\n'); // clear input buffer
     if(temp_state < MIN_STATE || temp_state > MAX_STATE){
       printf("Stato non valido, riprova.\n");
       continue;
     }
     goodInput = 1;
-    t.state = temp_state;
+    ticket.state = temp_state;
   }
 
-  return t;
+  return ticket;
 }
 
+// ask user for input credentials
+void getUserCredentials(User *user){
+  printf("Enter username: ");
+  fgets(user->username, sizeof(user->username), stdin);
+  user->username[strcspn(user->username, "\n")] = 0; // remove newline character
+
+  printf("Enter password: ");
+  fgets(user->password, sizeof(user->password), stdin);
+  user->password[strcspn(user->password, "\n")] = 0; // remove newline character
+}
+
+// ask user for id of ticket to resolve
+void getTicketIdToResolve(Ticket *ticket){
+  printf("Enter ticket id to resolve: ");
+  scanf("%d", &ticket->id); // !! se vogliamo usare fgets poi dobbiamo convertire in int usando atoi, che facciamo ??
+  while(getchar() != '\n'); // clear input buffer
+}
+
+// ask admin the username and password of the agent to create
+void getAgentData(User *agent){
+  printf("Enter agent username: ");
+  fgets(agent->username, sizeof(agent->username), stdin);
+  agent->username[strcspn(agent->username, "\n")] = 0; // remove newline character
+
+  printf("Enter agent password: ");
+  fgets(agent->password, sizeof(agent->password), stdin);
+  agent->password[strcspn(agent->password, "\n")] = 0; // remove newline character
+}
+
+//!! solo l'admin può aggiornare la priorità ??
+// ask admin the new ticket priority 
+void getTicketDataToUpdate(cJSON *updatesJSON){
+  int goodInput = 0;
+  while(!goodInput) {
+    int temp_priority;
+    printf("Enter new ticket priority (1: Low, 2: Medium, 3: High):\n");
+    scanf("%d", &temp_priority); 
+    while(getchar() != '\n'); // clear input buffer
+    if (temp_priority < MIN_PRIORITY || temp_priority > MAX_PRIORITY) {
+      printf("Invalid priority, try again.\n");
+      continue;
+    }
+    goodInput = 1;
+    cJSON_AddNumberToObject(updatesJSON, "priority", temp_priority); 
+  }
+}
+
+// ask admin the new ticket agent
+void getTicketAgentToUpdate(cJSON *updatesJSON){
+  char agentUsername[MAX_USERNAME_LENGTH+1];
+  printf("Enter new ticket agent username: ");
+  fgets(agentUsername, sizeof(agentUsername), stdin);
+  agentUsername[strcspn(agentUsername, "\n")] = 0; // remove newline character
+
+  cJSON *agentObj = cJSON_CreateObject();
+  cJSON_AddStringToObject(agentObj, "username", agentUsername); 
+  cJSON_AddItemToObject(updatesJSON, "agent", agentObj); //add the agent object to the updates
+  //!! dobbiamo scegliere se fare cosi o solo con la stringa dell'username !!
+}
 
 // message interpretation
 void handleMessage(char *stringMessage, User *userData){
