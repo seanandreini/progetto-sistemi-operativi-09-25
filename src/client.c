@@ -165,26 +165,16 @@ int main(int argc, char *argv[]){
   
   
   User userData = {0};
+  
+
+
+  // //* SIGN UP
   Message message = {0};
-  
-
-
-  //* SIGN UP
-  // message.action_code = SIGNUP_MESSAGE_CODE;
-  // User user;
-  // strcpy(user.username, "nuovoUsername");
-  // strcpy(user.password, "password");
-  // message.data = parseUserToJSON(&user);
-
-
-  //* AGENT CREATION
-  // strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
-
-
-
-  
-  
-
+  message.action_code = SIGNUP_MESSAGE_CODE;
+  User user;
+  strcpy(user.username, "nuovoUsername");
+  strcpy(user.password, "password");
+  message.data = parseUserToJSON(&user);
 
 
 

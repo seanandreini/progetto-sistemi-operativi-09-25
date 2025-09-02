@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
 #include "../include/functions.h"
@@ -21,7 +23,7 @@
 
 #define TICKET_FILE_ADDRESS "./data/ticketList.json"
 #define USERS_FILE_ADDRESS "./data/users.json"
-#define AGENTS_FILE_ADDRESS "./data/agentList.json"
+#define DATA_FOLDER_ADDRESS "./data"
 
 //! RICORDA DI CAMBIARE IN -1 ERRORE PARSEJSON
 
@@ -663,6 +665,8 @@ int handleMessage(int clientfd, char *stringMessage){
       }
   
       cJSON *fileUser = NULL;
+
+      printf("username: %s\n", user.username);
   
       cJSON_ArrayForEach(fileUser, fileUsers){
         if(strcmp(cJSON_GetObjectItem(fileUser, "username")->valuestring, user.username)==0){
@@ -676,10 +680,10 @@ int handleMessage(int clientfd, char *stringMessage){
       }
     }
 
-    userData.role = USER_ROLE;
-    userData.isAvailable = -1;
+    user.role = USER_ROLE;
+    user.isAvailable = -1;
 
-    cJSON_AddItemToArray(fileUsers, parseUserToJSON(&userData));
+    cJSON_AddItemToArray(fileUsers, parseUserToJSON(&user));
 
     ftruncate(fileno(file), 0);
     fseek(file, 0, SEEK_SET);
@@ -692,6 +696,7 @@ int handleMessage(int clientfd, char *stringMessage){
     message.data = cJSON_CreateString("Utente registrato con successo.");
     char *messageString = cJSON_Print(parseMessageToJSON(&message));
     write(clientfd, messageString, strlen(messageString));
+    write(clientfd, "\0", 1);
     free(messageString);
     break;
   }
@@ -864,12 +869,13 @@ int main(int argc, char *argv[]){
   socklen_t clientAddressSize;
   struct sockaddr_in serverAddress, clientAddress;
 
+  mkdir(DATA_FOLDER_ADDRESS, 0777);
+
   // creates files if it doesn't exist
   FILE *file = fopen(TICKET_FILE_ADDRESS, "a");
   fclose(file);
   file = fopen(USERS_FILE_ADDRESS, "a");
   fclose(file);
-  file = fopen(AGENTS_FILE_ADDRESS, "a");
 
   signal(SIGCHLD, SIG_IGN); // anti zombie handler
 
@@ -929,8 +935,11 @@ int main(int argc, char *argv[]){
           //lettura messaggio dal client e stampa
           char receivedMessage[256]= {0};
           if(readMessage(clientfd, receivedMessage)==0) break; // connection interrupted abnormally by client
-          // printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
+          printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
+          
           if(handleMessage(clientfd, receivedMessage) == 0) break;
+
+          printf("Message handled.\n");
         }
         close(clientfd);
         printf("Connection closed.\n");
