@@ -425,8 +425,12 @@ int handleMessage(int clientfd, char *stringMessage){
     return -1;
   }
 
+  // sends client same message to inform it the connection is being closed server-side
   if(message.action_code == CLOSE_CONNECTION_MESSAGE_CODE){
-    printf("Client has closed the connection.\n");
+    char *responseString = cJSON_Print(parseMessageToJSON(&message));
+    write(clientfd, responseString, strlen(responseString));
+    write(clientfd, "\0", 1);
+    free(responseString);
     return 0;
   }
 
@@ -666,7 +670,7 @@ int handleMessage(int clientfd, char *stringMessage){
   
       cJSON *fileUser = NULL;
 
-      printf("username: %s\n", user.username);
+      // printf("username: %s\n", user.username);
   
       cJSON_ArrayForEach(fileUser, fileUsers){
         if(strcmp(cJSON_GetObjectItem(fileUser, "username")->valuestring, user.username)==0){
@@ -674,8 +678,9 @@ int handleMessage(int clientfd, char *stringMessage){
           message.data = cJSON_CreateString("The username is already taken.");
           char *messageString = cJSON_Print(parseMessageToJSON(&message));
           write(clientfd, messageString, strlen(messageString));
+          write(clientfd, "\0", 1);
           free(messageString);
-          return 0; // not an error server-side
+          return 1; // not an error server-side
         }
       }
     }
@@ -932,14 +937,19 @@ int main(int argc, char *argv[]){
         printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
         
         while(1){
-          //lettura messaggio dal client e stampa
           char receivedMessage[256]= {0};
-          if(readMessage(clientfd, receivedMessage)==0) break; // connection interrupted abnormally by client
-          printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
+          if(readMessage(clientfd, receivedMessage)==0){
+            printf("Client %s:%d has interrupted the connection abnormally.\n", 
+              inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
+            break;
+          }
+          // printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
           
-          if(handleMessage(clientfd, receivedMessage) == 0) break;
-
-          printf("Message handled.\n");
+          if(handleMessage(clientfd, receivedMessage) == 0){
+            printf("Client %s:%d has requested to close the connection.\n", 
+              inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
+            break;
+          }
         }
         close(clientfd);
         printf("Connection closed.\n");
