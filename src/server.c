@@ -454,6 +454,13 @@ int handleMessage(int clientfd, char *stringMessage){
       return -1;
     }
 
+    //server use actual date for ticket date
+    time_t actualTime = time(NULL);
+    struct tm *timeInfo = localtime(&actualTime);
+    ticket.date.day = timeInfo->tm_mday;
+    ticket.date.month = timeInfo->tm_mon + 1; // tm_mon is 0-11
+    ticket.date.year = timeInfo->tm_year + 1900; // tm_year is years since 1900
+
     strcpy(ticket.user, userData.username);
     
     int agentWasAssigned = 0;

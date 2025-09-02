@@ -40,47 +40,8 @@ Ticket createTicket() {
   int currentMonth = tm.tm_mon + 1; // tm_mon is 0-11
   int currentYear = tm.tm_year + 1900; // tm_year is years since 1900
 
-  while (!goodInput) {
-    int day, month, year;
-    printf("Data (gg/mm/aaaa):\n");
-    
-    // Check scanf return value
-    if(scanf("%d/%d/%d", &day, &month, &year) != 3) {
-      printf("Formato data non valido, riprova.\n");
-      while(getchar() != '\n'); // clear wrong input buffer
-      continue;
-    }
-    while(getchar() != '\n'); // clear input buffer
-    
-    // Check for the month days
-    int daysInMonth = 31;
-    if(month == 4 || month == 6 || month == 9 || month == 11) {
-      daysInMonth = 30;
-    } else if(month == 2) {
-      // Check for leap year
-      if((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
-        daysInMonth = 29;
-      } else {
-        daysInMonth = 28;
-      }
-    }
-    
-    if(year < currentYear || 
-       year > currentYear || // allow tickets only for the current year
-       month < 1 || month > 12 || 
-       day < 1 || day > daysInMonth ||
-       (year == currentYear && month < currentMonth) ||
-       (year == currentYear && month == currentMonth && day < currentDay)) {
-      printf("Data non valida, riprova.\n");
-      continue;
-    }
+  //la data viene impostata automaticamente a quella corrente al momento della creazione del ticket nel server
 
-    goodInput = 1;
-    ticket.date.day = day;
-    ticket.date.month = month;
-    ticket.date.year = year;
-  }
-  
   goodInput = 0; // reset for next input
   
   while(!goodInput) {
