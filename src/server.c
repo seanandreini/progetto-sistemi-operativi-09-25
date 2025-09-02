@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "../lib/cJSON/cJSON.h"
 #include "../include/jsonParser.h"
 #include "../include/functions.h"
@@ -21,7 +23,7 @@
 
 #define TICKET_FILE_ADDRESS "./data/ticketList.json"
 #define USERS_FILE_ADDRESS "./data/users.json"
-#define AGENTS_FILE_ADDRESS "./data/agentList.json"
+#define DATA_FOLDER_ADDRESS "./data"
 
 //! RICORDA DI CAMBIARE IN -1 ERRORE PARSEJSON
 
@@ -850,6 +852,91 @@ int handleMessage(int clientfd, char *stringMessage){
     break;
   }
 
+  case CREATE_AGENT_MESSAGE_CODE:{
+    //the user must be an admin
+    if(userData.role != ADMIN_ROLE){
+      message.action_code = INFO_MESSAGE_CODE;
+      message.data = cJSON_CreateString("Only admins can create agents.");
+      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      write(clientfd, responseMessage, strlen(responseMessage));
+      write(clientfd, "\0", 1);
+      free(responseMessage);
+      break; // not an error server-side
+    }
+
+    User newAgent = {0};
+    if(!parseJSONToUser(message.data, &newAgent)){
+      printf("Error parsing user from message data.\n");
+      return -1;
+    }
+
+    newAgent.role = AGENT_ROLE; // force role to agent
+
+    FILE *file = fopen(USERS_FILE_ADDRESS, "r+");
+    flock(fileno(file), LOCK_EX);
+
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    //control if username is already taken
+    cJSON *fileUsers = cJSON_CreateArray();
+
+    //load existing users
+    if(fileSize>0){
+      char *fileContent = calloc(fileSize+1, sizeof(char));
+      fread(fileContent, 1, fileSize, file);
+      fileUsers = cJSON_Parse(fileContent);
+      free(fileContent);
+      if(fileUsers == NULL){
+        printf("Error parsing users file.\n");
+        cJSON_Delete(fileUsers);
+        fclose(file);
+        return -1;
+      }
+    }
+
+    // check username uniqueness
+    int usernameTaken = 0;
+    cJSON *user = NULL;
+    cJSON_ArrayForEach(user, fileUsers){
+      if(strcmp(cJSON_GetObjectItem(user, "username")->valuestring, newAgent.username)==0){
+        usernameTaken = 1;
+        break;
+      }
+    }
+
+    if(usernameTaken){
+      message.action_code = INFO_MESSAGE_CODE;
+      message.data = cJSON_CreateString("The username is already taken.");
+      
+    }else{
+      newAgent.isAvailable = 1; // new agents are available by default
+      cJSON_AddItemToArray(fileUsers, parseUserToJSON(&newAgent));
+
+      ftruncate(fileno(file), 0);
+      fseek(file, 0, SEEK_SET);
+      char *newFileContent = cJSON_Print(fileUsers);
+      fwrite(newFileContent, 1, strlen(newFileContent), file);
+      free(newFileContent);
+
+      message.action_code = INFO_MESSAGE_CODE;
+      message.data = cJSON_CreateString("Agent created successfully.");
+      
+    }
+
+    char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+    write(clientfd, responseMessage, strlen(responseMessage));
+    write(clientfd, "\0", 1);
+    free(responseMessage);
+
+    cJSON_Delete(fileUsers);
+    fclose(file);
+
+    break; 
+
+  }
+      
   default:
     printf("ERROR: Invalid action_code.\n");
     break;
@@ -864,12 +951,13 @@ int main(int argc, char *argv[]){
   socklen_t clientAddressSize;
   struct sockaddr_in serverAddress, clientAddress;
 
+  mkdir(DATA_FOLDER_ADDRESS, 0777);
+
   // creates files if it doesn't exist
   FILE *file = fopen(TICKET_FILE_ADDRESS, "a");
   fclose(file);
   file = fopen(USERS_FILE_ADDRESS, "a");
   fclose(file);
-  file = fopen(AGENTS_FILE_ADDRESS, "a");
 
   signal(SIGCHLD, SIG_IGN); // anti zombie handler
 
@@ -925,13 +1013,15 @@ int main(int argc, char *argv[]){
 
         printf("Connection accepted from %s:%d\n", inet_ntoa(clientAddress.sin_addr), ntohs(clientAddress.sin_port));
         
-        while(1){
+        //while(1){
           //lettura messaggio dal client e stampa
           char receivedMessage[256]= {0};
-          if(readMessage(clientfd, receivedMessage)==0) break; // connection interrupted abnormally by client
+          //if(readMessage(clientfd, receivedMessage)==0) break; // connection interrupted abnormally by client
+          readMessage(clientfd, receivedMessage); //!!da togliere!!
           // printf("Received from client n.%d: %s", clientfd, cJSON_Print(cJSON_Parse(receivedMessage)));
-          if(handleMessage(clientfd, receivedMessage) == 0) break;
-        }
+          //if(handleMessage(clientfd, receivedMessage) == 0) break;
+          handleMessage(clientfd, receivedMessage); //!!da togliere!!
+        //}
         close(clientfd);
         printf("Connection closed.\n");
         exit(0); // terminate child process
