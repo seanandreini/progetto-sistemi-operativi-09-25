@@ -13,7 +13,8 @@
 #define SIGNUP_MESSAGE_CODE 4
 #define TICKET_CONSULTATION_MESSAGE_CODE 5
 #define RESOLVE_TICKET_MESSAGE_CODE 6
-#define UPDATE_TICKET_MESSAGE_CODE 7
+#define UPDATE_TICKET_PRIORITY_MESSAGE_CODE 7
+#define ASSIGN_AGENT_MESSAGE_CODE 8
 
 #define GENERAL_ERROR_CODE -1
 
@@ -39,16 +40,6 @@ typedef enum role{
   AGENT_ROLE = 1,
   ADMIN_ROLE = 2
 } Role;
-
-// typedef struct login_data{
-//   LoginRequestType request_type;
-//   Role role;
-//   char username[MAX_USERNAME_LENGTH+1];
-//   char password[MAX_PASSWORD_LENGTH+1];
-//   char token[SESSION_TOKEN_LENGTH+1];
-//   int isAvailable;
-// } LoginData;
-
 
 typedef struct user{
   Role role;

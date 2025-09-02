@@ -66,7 +66,7 @@ Ticket createTicket() {
 void handleMessage(char *stringMessage, User *userData){
   Message message = {0};
   if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
-    printf("Invalid json response.\n");
+    printf("Server sent an invalid response\n");
     return;
   }
 
@@ -184,6 +184,8 @@ int main(int argc, char *argv[]){
       "3: Create ticket\n"
       "4: View your tickets\n"
       "5: Release ticket\n"
+      "6: Update ticket state\n"
+      "7 Assign new agent to ticket\n"
       "0: Log out\n");
     
     scanf("%d", &operation);
@@ -205,7 +207,7 @@ int main(int argc, char *argv[]){
         //* SIGN IN
         message.action_code = LOGIN_REQUEST_MESSAGE_CODE;
         User user;
-        strcpy(user.username, "nuovoUsername");
+        strcpy(user.username, "admin");
         strcpy(user.password, "password");
         message.data = parseUserToJSON(&user);
         break;
@@ -222,22 +224,41 @@ int main(int argc, char *argv[]){
         ticket.state = OPEN_STATE;
         message.action_code = CREATE_TICKET_MESSAGE_CODE;
         message.data = parseTicketToJSON(&ticket);
-        strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+        strcpy(message.session_token, userData.token);
         break;
       }
       case 4:{
         //* TICKET CONSULTATION
         message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
-        strcpy(message.session_token, "D@Y7XB%G)XwUK]'O");
+        strcpy(message.session_token, userData.token);
         break;
       }
       case 5:{
         //* RESOLVE TICKET
-        message.action_code = RESOLVE_TICKET_MESSAGE_CODE;
-        strcpy(message.session_token, "WXJ{)#vi3Lo(Hb5{");
         Ticket ticket = {0};
         ticket.id = 2;
+        message.action_code = RESOLVE_TICKET_MESSAGE_CODE;
         message.data = parseTicketToJSON(&ticket);
+        strcpy(message.session_token, userData.token);
+        break;
+      }
+      case 6:{
+        //* UPDATE TICKET STATE FROM ADMIN
+        message.action_code = UPDATE_TICKET_PRIORITY_MESSAGE_CODE;
+        Ticket ticket = {0};
+        ticket.id = 1;
+        ticket.priority = 2;
+        message.data = parseTicketToJSON(&ticket);
+        strcpy(message.session_token, userData.token);
+        break;
+      }
+      case 7:{
+        message.action_code = ASSIGN_AGENT_MESSAGE_CODE;
+        Ticket ticket = {0};
+        ticket.id = 1;
+        strcpy(ticket.agent, "agent2");
+        message.data = parseTicketToJSON(&ticket);
+        strcpy(message.session_token, userData.token);
         break;
       }
       case 0:{
@@ -245,7 +266,7 @@ int main(int argc, char *argv[]){
         keepGoing = 0;
         message.action_code = CLOSE_CONNECTION_MESSAGE_CODE;
         message.data = cJSON_CreateString("");
-        strcpy(message.session_token, "WXJ{)#vi3Lo(Hb5{");
+        strcpy(message.session_token, userData.token);
         break;
       }
 
