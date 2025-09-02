@@ -83,13 +83,9 @@ void handleMessage(char *stringMessage, User *userData){
       // char *message = cJSON_GetObjectItem(jsonInData, "message")->valuestring;
       // sessionToken = cJSON_GetObjectItem(jsonInData, "token")->valuestring;
       if(strlen(message.session_token)!=0){
-        printf("Token: %s\n", message.session_token);
+        strcpy(userData->token, message.session_token);
       }
-      else{
-        printf("%s\n", cJSON_Print(message.data));
-      }
-      
-      
+      printf("%s\n", cJSON_Print(message.data));
       break;
     }
     
@@ -173,21 +169,6 @@ int main(int argc, char *argv[]){
   
   User userData = {0};
   
-
-
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   int keepGoing = 1;
   while (keepGoing)
   {
@@ -225,7 +206,7 @@ int main(int argc, char *argv[]){
         message.action_code = LOGIN_REQUEST_MESSAGE_CODE;
         User user;
         strcpy(user.username, "nuovoUsername");
-        strcpy(user.password, "passwsord");
+        strcpy(user.password, "password");
         message.data = parseUserToJSON(&user);
         break;
       }
