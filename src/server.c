@@ -671,7 +671,7 @@ int handleMessage(int clientfd, char *stringMessage){
       free(newFileContent);
 
       message.action_code = INFO_MESSAGE_CODE;
-      message.data = cJSON_CreateString("Utente registrato con successo.");
+      message.data = cJSON_CreateString("User created successfully.");
       char *messageString = cJSON_Print(parseMessageToJSON(&message));
       write(clientfd, messageString, strlen(messageString));
       write(clientfd, "\0", 1);
@@ -863,6 +863,27 @@ int handleMessage(int clientfd, char *stringMessage){
         break; // not an error server-side
       }
 
+      cJSON *fileAgents = loadAvailableAgents();
+      cJSON *fileAgent = NULL;
+      int isPresent = 0;
+      cJSON_ArrayForEach(fileAgent, fileAgents){
+        printf("1 %s 2 %s %d\n", cJSON_GetObjectItem(fileAgent, "username")->valuestring, newTicket.agent,
+         strcmp(cJSON_GetObjectItem(fileAgent, "username")->valuestring, newTicket.agent));
+        if(strcmp(cJSON_GetObjectItem(fileAgent, "username")->valuestring, newTicket.agent) == 0){
+          isPresent = 1;
+          break;
+        }
+      }
+      if(!isPresent){
+        message.action_code = INFO_MESSAGE_CODE;
+        message.data = cJSON_CreateString("You can't reassign an occupied agent.");
+        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        write(clientfd, responseMessage, strlen(responseMessage));
+        write(clientfd, "\0", 1);
+        free(responseMessage);
+        break; // not an error server-side
+      }
+
       cJSON *updates = cJSON_CreateObject();
       cJSON_AddStringToObject(updates, "agent", newTicket.agent);
 
@@ -871,7 +892,6 @@ int handleMessage(int clientfd, char *stringMessage){
 
       if(updateTicket(ticket.id, updates)){
         if(ticket.state == IN_PROGRESS_STATE){
-          printf("ticket %s newTicket %s\n", ticket.agent, newTicket.agent);
           setAgentStatus(ticket.agent, 1);
           setAgentStatus(newTicket.agent, 0);
         }

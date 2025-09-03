@@ -21,57 +21,26 @@
 //! USARE FGETS INVECE CHE SCANF O PULIRE IL BUFFER
 //! Alcune volte si usa italiano altre inglese, forse meglio se lo fai te che il mio inglese... -_- !
 
-Ticket createTicket() {
-  Ticket ticket;
-  int goodInput = 0;
+void createTicket(Ticket *ticket) {
+  printf("Enter the ticket details:\n");
+  printf("Title:\n");
+  fgets(ticket->title, sizeof(ticket->title), stdin); 
+  ticket->title[strcspn(ticket->title, "\n")] = 0; // remove newline character
 
-  printf("Inserisci i dati del ticket:\n");
-  printf("Titolo:\n");
-  fgets(ticket.title, sizeof(ticket.title), stdin); 
-  ticket.title[strcspn(ticket.title, "\n")] = 0; // remove newline character
+  printf("Description:\n");
+  fgets(ticket->description, sizeof(ticket->description), stdin);
+  ticket->description[strcspn(ticket->description, "\n")] = 0; // remove newline character
 
-  printf("descrizione:\n");
-  fgets(ticket.description, sizeof(ticket.description), stdin);
-  ticket.description[strcspn(ticket.description, "\n")] = 0; // remove newline character
-
-  time_t t = time(NULL);
-  struct tm tm = *localtime(&t);
-  int currentDay = tm.tm_mday;
-  int currentMonth = tm.tm_mon + 1; // tm_mon is 0-11
-  int currentYear = tm.tm_year + 1900; // tm_year is years since 1900
-
-  //la data viene impostata automaticamente a quella corrente al momento della creazione del ticket nel server
-
-  goodInput = 0; // reset for next input
-  
-  while(!goodInput) {
-    int temp_priority;
-    printf("Priorità (1: Bassa, 2: Media, 3: Alta):\n");
-    scanf("%d", &temp_priority);
+  while(1) {
+    printf("Priority (1: Low, 2: Medium, 3: High):\n");
+    scanf("%d", &ticket->priority);
     while(getchar() != '\n'); // clear input buffer
-    if (temp_priority < MIN_PRIORITY || temp_priority > MAX_PRIORITY) {
-      printf("Priorità non valida, riprova.\n");
+    if (ticket->priority < MIN_PRIORITY || ticket->priority > MAX_PRIORITY) {
+      printf("Invalid priority, try again.\n");
       continue;
     }
-    goodInput = 1;
-    ticket.priority = temp_priority; 
+    break;
   }
-
-  goodInput = 0;
-  while(!goodInput) {
-    int temp_state;
-    printf("Stato (1: Aperto, 2: In Corso, 3: Chiuso):\n");
-    scanf("%d", &temp_state);
-    while(getchar() != '\n'); // clear input buffer
-    if(temp_state < MIN_STATE || temp_state > MAX_STATE){
-      printf("Stato non valido, riprova.\n");
-      continue;
-    }
-    goodInput = 1;
-    ticket.state = temp_state;
-  }
-
-  return ticket;
 }
 
 // ask user for input credentials
@@ -92,47 +61,34 @@ void getTicketIdToResolve(Ticket *ticket){
   while(getchar() != '\n'); // clear input buffer
 }
 
-// ask admin the username and password of the agent to create
-void getAgentData(User *agent){
-  printf("Enter agent username: ");
-  fgets(agent->username, sizeof(agent->username), stdin);
-  agent->username[strcspn(agent->username, "\n")] = 0; // remove newline character
-
-  printf("Enter agent password: ");
-  fgets(agent->password, sizeof(agent->password), stdin);
-  agent->password[strcspn(agent->password, "\n")] = 0; // remove newline character
-}
-
-//!! solo l'admin può aggiornare la priorità ??
 // ask admin the new ticket priority 
-void getTicketDataToUpdate(cJSON *updatesJSON){
-  int goodInput = 0;
-  while(!goodInput) {
-    int temp_priority;
+void getTicketPriorityToUpdate(Ticket *ticket){
+  printf("Enter ticket id:\n");
+  scanf("%d", &ticket->id);
+  while(getchar() != '\n'); // clear input buffer
+  while(1) {
     printf("Enter new ticket priority (1: Low, 2: Medium, 3: High):\n");
-    scanf("%d", &temp_priority); 
+    scanf("%d", &ticket->priority); 
     while(getchar() != '\n'); // clear input buffer
-    if (temp_priority < MIN_PRIORITY || temp_priority > MAX_PRIORITY) {
+    if (ticket->priority < MIN_PRIORITY || ticket->priority > MAX_PRIORITY) {
       printf("Invalid priority, try again.\n");
       continue;
     }
-    goodInput = 1;
-    cJSON_AddNumberToObject(updatesJSON, "priority", temp_priority); 
+    break;
   }
 }
 
 // ask admin the new ticket agent
-void getTicketAgentToUpdate(cJSON *updatesJSON){
-  char agentUsername[MAX_USERNAME_LENGTH+1];
-  printf("Enter new ticket agent username: ");
-  fgets(agentUsername, sizeof(agentUsername), stdin);
-  agentUsername[strcspn(agentUsername, "\n")] = 0; // remove newline character
+void getTicketAgentToUpdate(Ticket *ticket){
+  printf("Enter ticket id: ");
+  scanf("%d", &ticket->id); 
+  while(getchar() != '\n'); // clear input buffer
 
-  cJSON *agentObj = cJSON_CreateObject();
-  cJSON_AddStringToObject(agentObj, "username", agentUsername); 
-  cJSON_AddItemToObject(updatesJSON, "agent", agentObj); //add the agent object to the updates
-  //!! dobbiamo scegliere se fare cosi o solo con la stringa dell'username !!
+  printf("Enter username: ");
+  fgets(ticket->agent, sizeof(ticket->agent), stdin);
+  ticket->agent[strcspn(ticket->agent, "\n")] = 0; // remove newline character
 }
+
 
 // message interpretation
 void handleMessage(char *stringMessage, User *userData){
@@ -152,8 +108,6 @@ void handleMessage(char *stringMessage, User *userData){
     }
 
     case LOGIN_INFO_MESSAGE_CODE:{
-      // char *message = cJSON_GetObjectItem(jsonInData, "message")->valuestring;
-      // sessionToken = cJSON_GetObjectItem(jsonInData, "token")->valuestring;
       if(strlen(message.session_token)!=0){
         strcpy(userData->token, message.session_token);
       }
@@ -200,8 +154,7 @@ int main(int argc, char *argv[]){
   printf("Client started.\n");
   int clientfd, resultCode;
   struct sockaddr_in serverAddress;
-  // create socket
-  clientfd = socket(AF_INET, SOCK_STREAM, 0);
+  
 
   serverAddress.sin_family = AF_INET;
   serverAddress.sin_port = htons(SERVER_PORT);
@@ -210,42 +163,23 @@ int main(int argc, char *argv[]){
   // connection
   do
   {
+    // create socket
+    clientfd = socket(AF_INET, SOCK_STREAM, 0);
     resultCode = connect(clientfd, (struct sockaddr*) &serverAddress, sizeof(serverAddress));
     if(resultCode == -1) {
-      printf("Error connecting to server, trying again in 1 second\n");
+      perror("Error connecting to server");
       sleep(1);
     }
   } while (resultCode == -1);
 
   printf("Connected to server at %s:%d\n", SERVER_ADDRESS, SERVER_PORT);
 
-
-  // char sessionToken[SESSION_TOKEN_LENGTH];
-  
-
-
-  
-
-  
-
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
   
   User userData = {0};
-  
   int keepGoing = 1;
   while (keepGoing)
   {
     //! si potrebbe mettere un print diverso in base al ruolo dopo il login
-    //! guardare se pulire console
     Message message = {0};
     int operation;
 
@@ -257,7 +191,8 @@ int main(int argc, char *argv[]){
       "4: View your tickets\n"
       "5: Release ticket\n"
       "6: Update ticket state\n"
-      "7 Assign new agent to ticket\n"
+      "7: Assign new agent to ticket\n"
+      "8: Create agent account\n"
       "0: Log out\n");
     
     scanf("%d", &operation);
@@ -270,8 +205,7 @@ int main(int argc, char *argv[]){
         //* SIGN UP
         message.action_code = SIGNUP_MESSAGE_CODE;
         User user;
-        strcpy(user.username, "nuovoUsername");
-        strcpy(user.password, "password");
+        getUserCredentials(&user);
         message.data = parseUserToJSON(&user);
         break;
       }
@@ -279,21 +213,14 @@ int main(int argc, char *argv[]){
         //* SIGN IN
         message.action_code = LOGIN_REQUEST_MESSAGE_CODE;
         User user;
-        strcpy(user.username, "admin");
-        strcpy(user.password, "password");
+        getUserCredentials(&user);
         message.data = parseUserToJSON(&user);
         break;
       }
       case 3:{
         //* CREAZIONE TICKET 
-        Ticket ticket;
-        strncpy(ticket.title, "Ticket Titolo", strlen("Ticket Titolo"));
-        strncpy(ticket.description, "Ticket description", strlen("Ticket description"));
-        ticket.date.day = 1;
-        ticket.date.month = 1;
-        ticket.date.year = 2023;
-        ticket.priority = MEDIUM;
-        ticket.state = OPEN_STATE;
+        Ticket ticket = {0};
+        createTicket(&ticket);
         message.action_code = CREATE_TICKET_MESSAGE_CODE;
         message.data = parseTicketToJSON(&ticket);
         strcpy(message.session_token, userData.token);
@@ -308,28 +235,36 @@ int main(int argc, char *argv[]){
       case 5:{
         //* RESOLVE TICKET
         Ticket ticket = {0};
-        ticket.id = 2;
+        getTicketIdToResolve(&ticket);
         message.action_code = RESOLVE_TICKET_MESSAGE_CODE;
         message.data = parseTicketToJSON(&ticket);
         strcpy(message.session_token, userData.token);
         break;
       }
       case 6:{
-        //* UPDATE TICKET STATE FROM ADMIN
+        //* UPDATE TICKET STATE AS ADMIN
         message.action_code = UPDATE_TICKET_PRIORITY_MESSAGE_CODE;
         Ticket ticket = {0};
-        ticket.id = 1;
-        ticket.priority = 2;
+        getTicketPriorityToUpdate(&ticket);
         message.data = parseTicketToJSON(&ticket);
         strcpy(message.session_token, userData.token);
         break;
       }
       case 7:{
-        message.action_code = ASSIGN_AGENT_MESSAGE_CODE;
+        //* ASSIGN AGENT TO TICKET AS ADMIN
         Ticket ticket = {0};
-        ticket.id = 1;
-        strcpy(ticket.agent, "agent2");
+        getTicketAgentToUpdate(&ticket);
+        message.action_code = ASSIGN_AGENT_MESSAGE_CODE;
         message.data = parseTicketToJSON(&ticket);
+        strcpy(message.session_token, userData.token);
+        break;
+      }
+      case 8:{
+        //* AGENT CREATION AS ADMIN
+        User user = {0};
+        getUserCredentials(&user);
+        message.action_code = CREATE_AGENT_MESSAGE_CODE;
+        message.data = parseUserToJSON(&user);
         strcpy(message.session_token, userData.token);
         break;
       }
