@@ -98,8 +98,6 @@ void handleMessage(char *stringMessage, User *userData){
     return;
   }
 
-  // cJSON *jsonInData = cJSON_GetObjectItem(jsonInMessage, "data");
-
   switch (message.action_code)
   {
     case INFO_MESSAGE_CODE:{
@@ -123,9 +121,9 @@ void handleMessage(char *stringMessage, User *userData){
 
       cJSON *jsonTicket;
       cJSON_ArrayForEach(jsonTicket, message.data){
-        Ticket ticket;
+        Ticket ticket = {0};
         parseJSONToTicket(jsonTicket, &ticket);
-        printf("Ticket number: %d\n%s\n%s\nPriority: %s\nStatus: %s\nCreated on: %d/%d/%d\nAgent assigned: %s\n", 
+        printf("Ticket number: %d\n%s\n%s\nPriority: %s\nStatus: %s\nCreated on: %d/%d/%d\nAgent assigned: %s\n\n", 
           ticket.id, ticket.title, ticket.description, 
           ticket.priority==HIGH? "High":ticket.priority==MEDIUM? "Medium":"Low", 
           ticket.state==OPEN_STATE? "Open":ticket.state==IN_PROGRESS_STATE? "In progress":"Closed", 
@@ -190,7 +188,7 @@ int main(int argc, char *argv[]){
       "3: Create ticket\n"
       "4: View your tickets\n"
       "5: Release ticket\n"
-      "6: Update ticket state\n"
+      "6: Update ticket priority\n"
       "7: Assign new agent to ticket\n"
       "8: Create agent account\n"
       "0: Log out\n");

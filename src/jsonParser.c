@@ -25,7 +25,7 @@ cJSON *parseTicketToJSON(Ticket *ticket) {
 }
 
 int parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
-  if(jsonTicket==NULL) return 0;
+  if(jsonTicket==NULL) return GENERAL_ERROR_CODE;
 
   cJSON *id = cJSON_GetObjectItem(jsonTicket, "id");
   if(id != NULL)
@@ -62,7 +62,7 @@ cJSON *parseDateToJSON(Date *date) {
 }
 
 int parseJSONToDate(cJSON *jsonDate, Date *date){
-  if(jsonDate==NULL) return 0;
+  if(jsonDate==NULL) return GENERAL_ERROR_CODE;
 
   date->day = cJSON_GetObjectItem(jsonDate, "day")->valueint;
   date->month = cJSON_GetObjectItem(jsonDate, "month")->valueint;
@@ -79,7 +79,7 @@ cJSON *parseAgentToJSON(Agent *agent) {
 }
 
 int parseJSONToAgent(cJSON *jsonAgent, Agent *agent){  //??migliorabile??
-  if(jsonAgent==NULL) return 0;
+  if(jsonAgent==NULL) return GENERAL_ERROR_CODE;
 
   strncpy(agent->username, cJSON_GetObjectItem(jsonAgent, "username")->valuestring, sizeof(agent->username)-1);
   agent->username[sizeof(agent->username)-1] = '\0';
@@ -98,38 +98,13 @@ cJSON *parseMessageToJSON(Message *message){
 }
 
 int parseJSONToMessage(cJSON *jsonMessage, Message *message){
-  if(jsonMessage==NULL) return 0;
+  if(jsonMessage==NULL) return GENERAL_ERROR_CODE;
   message->action_code = cJSON_GetObjectItem(jsonMessage, "action_code")->valueint;
   strcpy(message->session_token, cJSON_GetObjectItem(jsonMessage, "session_token")->valuestring);
   message->data = cJSON_GetObjectItem(jsonMessage, "data");
 
   return 1;
 }
-
-// cJSON *parseLoginDataToJSON(LoginData *loginData){
-//   cJSON *jsonLoginData = cJSON_CreateObject();
-//   cJSON_AddNumberToObject(jsonLoginData, "request_type", loginData->request_type);
-//   cJSON_AddNumberToObject(jsonLoginData, "role", loginData->role);
-//   cJSON_AddStringToObject(jsonLoginData, "username", loginData->username);
-//   cJSON_AddStringToObject(jsonLoginData, "password", loginData->password);
-//   cJSON_AddStringToObject(jsonLoginData, "token", loginData->token);
-//   cJSON_AddNumberToObject(jsonLoginData, "isAvailable", loginData->isAvailable);
-
-//   return jsonLoginData;
-// }
-
-// int parseJSONToLoginData(cJSON *jsonLoginData, LoginData *loginData){
-//   if(jsonLoginData==NULL) return 0;
-
-//   loginData->request_type = cJSON_GetObjectItem(jsonLoginData, "request_type")->valueint;
-//   loginData->role = cJSON_GetObjectItem(jsonLoginData, "role")->valueint;
-//   strcpy(loginData->username, cJSON_GetObjectItem(jsonLoginData, "username")->valuestring);
-//   strcpy(loginData->password, cJSON_GetObjectItem(jsonLoginData, "password")->valuestring);
-//   strcpy(loginData->token, cJSON_GetObjectItem(jsonLoginData, "token")->valuestring);
-//   loginData->isAvailable = cJSON_GetObjectItem(jsonLoginData, "isAvailable")->valueint;
-
-//   return 1;
-// }
 
 cJSON *parseUserToJSON(User *user){
   cJSON *jsonUser = cJSON_CreateObject();
@@ -143,7 +118,7 @@ cJSON *parseUserToJSON(User *user){
 }
 
 int parseJSONToUser(cJSON *jsonUser, User *user){
-  if(jsonUser==NULL) return 0;
+  if(jsonUser==NULL) return GENERAL_ERROR_CODE;
 
   user->role = cJSON_GetObjectItem(jsonUser, "role")->valueint;
   strcpy(user->username, cJSON_GetObjectItem(jsonUser, "username")->valuestring);
