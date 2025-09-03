@@ -104,7 +104,6 @@ int getNextTicketId(){
     }
   
     free(fileContent);
-    cJSON_Delete(ticket);
     cJSON_Delete(jsonTicketList);
   }
   fclose(file);
@@ -192,7 +191,7 @@ cJSON* loadAvailableAgents(){
     cJSON *role = cJSON_GetObjectItem(user, "role");
     if(role != NULL && isAvailable != NULL && 
       role->valueint==AGENT_ROLE && isAvailable->valueint){  
-      cJSON_AddItemToArray(agents, user); 
+      cJSON_AddItemToArray(agents, cJSON_Duplicate(user, 1)); 
     }
   }
   //! cJSON_Delete(users);
