@@ -3,9 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-//! VEDERE SE METTERE CONTROLLI DI SICUREZZA
-
 cJSON *parseTicketToJSON(Ticket *ticket) {
   cJSON *jsonTicket = cJSON_CreateObject();
 
@@ -23,10 +20,7 @@ cJSON *parseTicketToJSON(Ticket *ticket) {
 
   return jsonTicket;
 }
-
 int parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
-  if(jsonTicket==NULL) return GENERAL_ERROR_CODE;
-
   cJSON *id = cJSON_GetObjectItem(jsonTicket, "id");
   if(id != NULL)
     ticket->id = id->valueint;
@@ -52,7 +46,6 @@ int parseJSONToTicket(cJSON *jsonTicket, Ticket *ticket) {
   
   return 1;
 }
-
 cJSON *parseDateToJSON(Date *date) {
   cJSON *jsonDate = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonDate, "day", date->day);
@@ -60,7 +53,6 @@ cJSON *parseDateToJSON(Date *date) {
   cJSON_AddNumberToObject(jsonDate, "year", date->year);
   return jsonDate;
 }
-
 int parseJSONToDate(cJSON *jsonDate, Date *date){
   if(jsonDate==NULL) return GENERAL_ERROR_CODE;
 
@@ -70,15 +62,13 @@ int parseJSONToDate(cJSON *jsonDate, Date *date){
 
   return 1;
 }
-
 cJSON *parseAgentToJSON(Agent *agent) {
   cJSON *jsonAgent = cJSON_CreateObject();
   cJSON_AddStringToObject(jsonAgent, "username", agent->username);
   cJSON_AddNumberToObject(jsonAgent, "isAvailable", agent->isAvailable);
   return jsonAgent;
 }
-
-int parseJSONToAgent(cJSON *jsonAgent, Agent *agent){  //??migliorabile??
+int parseJSONToAgent(cJSON *jsonAgent, Agent *agent){
   if(jsonAgent==NULL) return GENERAL_ERROR_CODE;
 
   strncpy(agent->username, cJSON_GetObjectItem(jsonAgent, "username")->valuestring, sizeof(agent->username)-1);
@@ -87,7 +77,6 @@ int parseJSONToAgent(cJSON *jsonAgent, Agent *agent){  //??migliorabile??
 
   return 1;
 }
-
 cJSON *parseMessageToJSON(Message *message){
   cJSON *jsonMessage = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonMessage, "action_code", message->action_code);
@@ -96,7 +85,6 @@ cJSON *parseMessageToJSON(Message *message){
 
   return jsonMessage;
 }
-
 int parseJSONToMessage(cJSON *jsonMessage, Message *message){
   if(jsonMessage==NULL) return GENERAL_ERROR_CODE;
   message->action_code = cJSON_GetObjectItem(jsonMessage, "action_code")->valueint;
@@ -105,7 +93,6 @@ int parseJSONToMessage(cJSON *jsonMessage, Message *message){
 
   return 1;
 }
-
 cJSON *parseUserToJSON(User *user){
   cJSON *jsonUser = cJSON_CreateObject();
   cJSON_AddNumberToObject(jsonUser, "role", user->role);
@@ -116,7 +103,6 @@ cJSON *parseUserToJSON(User *user){
 
   return jsonUser;
 }
-
 int parseJSONToUser(cJSON *jsonUser, User *user){
   if(jsonUser==NULL) return GENERAL_ERROR_CODE;
 

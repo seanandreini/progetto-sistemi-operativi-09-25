@@ -2,7 +2,6 @@
 #define MESSAGE_H
 
 #define SESSION_TOKEN_LENGTH 16
-#define INITIAL_MESSAGE_SIZE 16
 
 // message codes to differentiate client-server requests
 #define CLOSE_CONNECTION_MESSAGE_CODE -1
@@ -29,12 +28,6 @@ typedef struct struct_json_message{
   cJSON *data;
   char session_token[SESSION_TOKEN_LENGTH+1];
 } Message;
-
-typedef enum login_request_type{
-  LOGIN_REQUEST = 0,
-  LOGIN_SUCCESSFUL_RESPONSE = 1,
-  SIGNUP_REQUEST = 2,
-} LoginRequestType;
 
 typedef enum role{
   USER_ROLE = 0,

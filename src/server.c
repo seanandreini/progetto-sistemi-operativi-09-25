@@ -27,9 +27,6 @@
 #define USERS_FILE_ADDRESS "./data/users.json"
 #define DATA_FOLDER_ADDRESS "./data"
 
-//! SI POTREBBE RESETTARE IL TOKEN AL LOGOUT
-//! PRINTUNFORMATTED
-
 // takes ticket in input and adds it to ticketList.json
 int saveTicket(cJSON *ticket){
   FILE *file = fopen(TICKET_FILE_ADDRESS, "r+");
@@ -194,7 +191,6 @@ cJSON* loadAvailableAgents(){
       cJSON_AddItemToArray(agents, cJSON_Duplicate(user, 1)); 
     }
   }
-  //! cJSON_Delete(users);
 
   return agents;
 }
@@ -387,7 +383,6 @@ int assignTicketToAgent(int ticketId, User *agent){
 
   // tries to update ticket
   if(updateTicket(ticketId, updates)){
-    //!cJSON_Delete(updates);
     if(!setAgentStatus(agent->username, 0)){
       printf("Error changing agent status.\n");
       return 0;
@@ -441,8 +436,6 @@ int getTicketById(int ticketId, Ticket *ticket){
       break;
     }
   }
-
-  //!cJSON_Delete(ticketList);
   return found;
 }
 
@@ -466,7 +459,7 @@ int handleMessage(int clientfd, char *stringMessage){
       // if authentication fails, it informs client
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Invalid session, try logging in.");
-      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
@@ -477,7 +470,7 @@ int handleMessage(int clientfd, char *stringMessage){
   {
     case CLOSE_CONNECTION_MESSAGE_CODE:{
       // sends client same message to inform it the connection is being closed server-side
-      char *responseString = cJSON_Print(parseMessageToJSON(&message));
+      char *responseString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseString, strlen(responseString));
       write(clientfd, "\0", 1);
       free(responseString);
@@ -635,7 +628,7 @@ int handleMessage(int clientfd, char *stringMessage){
           if(strcmp(cJSON_GetObjectItem(fileUser, "username")->valuestring, user.username)==0){
             message.action_code = INFO_MESSAGE_CODE;
             message.data = cJSON_CreateString("The username is already taken.");
-            char *messageString = cJSON_Print(parseMessageToJSON(&message));
+            char *messageString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
             write(clientfd, messageString, strlen(messageString));
             write(clientfd, "\0", 1);
             free(messageString);
@@ -659,7 +652,7 @@ int handleMessage(int clientfd, char *stringMessage){
       // informs client of successfull registration
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("User created successfully.");
-      char *messageString = cJSON_Print(parseMessageToJSON(&message));
+      char *messageString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, messageString, strlen(messageString));
       write(clientfd, "\0", 1);
       free(messageString);
@@ -672,7 +665,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(userData.role != USER_ROLE){
         message.data = cJSON_CreateString("Only an user can create a ticket.\n");
         message.action_code = INFO_MESSAGE_CODE;
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -730,7 +723,6 @@ int handleMessage(int clientfd, char *stringMessage){
         ticket.state = OPEN_STATE;
         strcpy(ticket.agent, "N/A"); // no agent assigned
       }
-      //!cJSON_Delete(availableAgents);
 
       // generates ticket ID and then saves it to ticketList.json
       ticket.id = getNextTicketId();
@@ -739,7 +731,6 @@ int handleMessage(int clientfd, char *stringMessage){
         printf("Error saving ticket.\n");
         return GENERAL_ERROR_CODE;
       }
-      //! cJSON_Delete(jsonTicket);
 
 
       // if an agent has been assigned, updates agent status
@@ -759,7 +750,7 @@ int handleMessage(int clientfd, char *stringMessage){
       snprintf(fullString, fullStringLength+1, "%s%d.", base, ticket.id);
       message.data = cJSON_CreateString(fullString);
       
-      char *response = cJSON_Print(parseMessageToJSON(&message));
+      char *response = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, response, strlen(response));
       write(clientfd, "\0", 1);
       break;
@@ -771,7 +762,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(userData.role != USER_ROLE && userData.role != AGENT_ROLE){
         message.data = cJSON_CreateString("Only an user or agent can consult their tickets.\n");
         message.action_code = INFO_MESSAGE_CODE;
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -812,7 +803,7 @@ int handleMessage(int clientfd, char *stringMessage){
       // sends ticket list to client
       message.action_code = TICKET_CONSULTATION_MESSAGE_CODE;
       message.data = returnTicketList;
-      char *responseString = cJSON_Print(parseMessageToJSON(&message));
+      char *responseString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseString, strlen(responseString));
       write(clientfd, "\0", 1);
       fclose(file);
@@ -825,7 +816,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(userData.role!=AGENT_ROLE){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("Only agents can resolve tickets.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -842,7 +833,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(!getTicketById(ticket.id, &ticket)){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("Ticket not found.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -853,7 +844,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(ticket.state!=IN_PROGRESS_STATE){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("You can only resolve tickets which are 'in progress'.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -864,7 +855,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(strcmp(userData.username, ticket.agent)!=0){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("You can only resolve tickets assigned to you.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -875,7 +866,6 @@ int handleMessage(int clientfd, char *stringMessage){
       cJSON *stateUpdate = cJSON_CreateObject();
       cJSON_AddNumberToObject(stateUpdate, "state", CLOSED_STATE);
       updateTicket(ticket.id, stateUpdate);
-      //!cJSON_Delete(stateUpdate);
       printf("Ticket %d resolved by agent %s.\n", ticket.id, userData.username);
 
       // tries to find another ticket to assign to agent
@@ -892,11 +882,10 @@ int handleMessage(int clientfd, char *stringMessage){
         printf("No open tickets available. Agent %s set to available.\n", userData.username);
       }
       
-      //!cJSON_Delete(message.data);
       // informs client
       message.action_code = INFO_MESSAGE_CODE;
       message.data = cJSON_CreateString("Ticket resolved successfully.");
-      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
@@ -909,7 +898,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(userData.role != ADMIN_ROLE){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("Only admins can update tickets.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -934,7 +923,7 @@ int handleMessage(int clientfd, char *stringMessage){
       
       // informs client if it was a success
       message.action_code = INFO_MESSAGE_CODE;
-      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
@@ -947,7 +936,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(userData.role != ADMIN_ROLE){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("Only admins can assign agents.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -965,7 +954,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(!getTicketById(newTicket.id, &ticket)){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("Invalid ticket ID. Please insert a correct ticket ID.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -976,7 +965,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(ticket.state == CLOSED_STATE){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("You can't reassign an agent to a ticket that has already been closed.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -1001,7 +990,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(!isPresent){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("You can't reassign an occupied agent.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -1035,7 +1024,7 @@ int handleMessage(int clientfd, char *stringMessage){
         // informs client
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("Agent assigned successfully.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -1050,7 +1039,7 @@ int handleMessage(int clientfd, char *stringMessage){
       if(userData.role != ADMIN_ROLE){
         message.action_code = INFO_MESSAGE_CODE;
         message.data = cJSON_CreateString("Only admins can create agents.");
-        char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+        char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
         write(clientfd, "\0", 1);
         free(responseMessage);
@@ -1117,7 +1106,7 @@ int handleMessage(int clientfd, char *stringMessage){
         message.data = cJSON_CreateString("Agent created successfully.");
       }
 
-      char *responseMessage = cJSON_Print(parseMessageToJSON(&message));
+      char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
       write(clientfd, responseMessage, strlen(responseMessage));
       write(clientfd, "\0", 1);
       free(responseMessage);
@@ -1223,7 +1212,7 @@ int main(int argc, char *argv[]){
             Message message = {0};
             message.action_code = INFO_MESSAGE_CODE;
             message.data = cJSON_CreateString("The server encountered an error, please refer to the system admin.\n");
-            char *responseString = cJSON_Print(parseMessageToJSON(&message));
+            char *responseString = cJSON_PrintUnformatted(parseMessageToJSON(&message));
             write(clientfd, responseString, strlen(responseString));
             write(clientfd, "\0", 1);
             free(responseString);

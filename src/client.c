@@ -18,9 +18,7 @@
 #define SERVER_PORT 12345
 #define SERVER_ADDRESS "127.0.0.1"
 
-//! USARE FGETS INVECE CHE SCANF O PULIRE IL BUFFER
-//! Alcune volte si usa italiano altre inglese, forse meglio se lo fai te che il mio inglese... -_- !
-
+// asks user for ticket info
 void createTicket(Ticket *ticket) {
   printf("Enter the ticket details:\n");
   printf("Title:\n");
@@ -43,25 +41,27 @@ void createTicket(Ticket *ticket) {
   }
 }
 
-// ask user for input credentials
+// asks user for input credentials
 void getUserCredentials(User *user){
   printf("Enter username: ");
   fgets(user->username, sizeof(user->username), stdin);
   user->username[strcspn(user->username, "\n")] = 0; // remove newline character
+  user->username[sizeof(user->username)-1] = '\0'; // in case username was too long
 
   printf("Enter password: ");
   fgets(user->password, sizeof(user->password), stdin);
   user->password[strcspn(user->password, "\n")] = 0; // remove newline character
+  user->password[sizeof(user->password)-1] = '\0'; // in case password was too long
 }
 
-// ask user for id of ticket to resolve
+// asks user for id of ticket to resolve
 void getTicketIdToResolve(Ticket *ticket){
   printf("Enter ticket id to resolve: ");
   scanf("%d", &ticket->id); // !! se vogliamo usare fgets poi dobbiamo convertire in int usando atoi, che facciamo ??
   while(getchar() != '\n'); // clear input buffer
 }
 
-// ask admin the new ticket priority 
+// asks admin the new ticket priority 
 void getTicketPriorityToUpdate(Ticket *ticket){
   printf("Enter ticket id:\n");
   scanf("%d", &ticket->id);
@@ -78,7 +78,7 @@ void getTicketPriorityToUpdate(Ticket *ticket){
   }
 }
 
-// ask admin the new ticket agent
+// asks admin the new ticket agent
 void getTicketAgentToUpdate(Ticket *ticket){
   printf("Enter ticket id: ");
   scanf("%d", &ticket->id); 
@@ -93,18 +93,19 @@ void getTicketAgentToUpdate(Ticket *ticket){
 // message interpretation
 void handleMessage(char *stringMessage, User *userData){
   Message message = {0};
-  if(!parseJSONToMessage(cJSON_Parse(stringMessage), &message)){
+  if(parseJSONToMessage(cJSON_Parse(stringMessage), &message) == GENERAL_ERROR_CODE){
     printf("Server sent an invalid response\n");
     return;
   }
 
   switch (message.action_code)
   {
+    // outputs on console whatever the server sent
     case INFO_MESSAGE_CODE:{
       printf("Server: %s\n", cJSON_Print(message.data));
       break;
     }
-
+    // saves token into userData for future requests
     case LOGIN_INFO_MESSAGE_CODE:{
       if(strlen(message.session_token)!=0){
         strcpy(userData->token, message.session_token);
@@ -112,7 +113,7 @@ void handleMessage(char *stringMessage, User *userData){
       printf("%s\n", cJSON_Print(message.data));
       break;
     }
-    
+    // prints ticket list
     case TICKET_CONSULTATION_MESSAGE_CODE:{
       if(cJSON_GetArraySize(message.data)==0){
         printf("No tickets linked to this user.\n");
@@ -133,7 +134,7 @@ void handleMessage(char *stringMessage, User *userData){
 
       break;
     }
-
+    // closes the connection
     case CLOSE_CONNECTION_MESSAGE_CODE:{
       printf("Server has closed the connection.\n");
       return; // skips "press any key to continue"
@@ -153,7 +154,7 @@ int main(int argc, char *argv[]){
   int clientfd, resultCode;
   struct sockaddr_in serverAddress;
   
-
+  // sets server address
   serverAddress.sin_family = AF_INET;
   serverAddress.sin_port = htons(SERVER_PORT);
   serverAddress.sin_addr.s_addr = inet_addr(SERVER_ADDRESS);
@@ -161,7 +162,7 @@ int main(int argc, char *argv[]){
   // connection
   do
   {
-    // create socket
+    // creates socket in while do wait server if it's down
     clientfd = socket(AF_INET, SOCK_STREAM, 0);
     resultCode = connect(clientfd, (struct sockaddr*) &serverAddress, sizeof(serverAddress));
     if(resultCode == -1) {
@@ -177,7 +178,6 @@ int main(int argc, char *argv[]){
   int keepGoing = 1;
   while (keepGoing)
   {
-    //! si potrebbe mettere un print diverso in base al ruolo dopo il login
     Message message = {0};
     int operation;
 
@@ -195,9 +195,10 @@ int main(int argc, char *argv[]){
     
     scanf("%d", &operation);
     char c;
-    while ((c = getchar()) != '\n' && c != EOF);
+    while ((c = getchar()) != '\n' && c != EOF); // empties buffer to get rid of \n
     system("clear");
 
+    // creates Message according to selected operation
     switch(operation){
       case 1:{
         //* SIGN UP
@@ -297,32 +298,9 @@ int main(int argc, char *argv[]){
     // printf("received %s\n", receivedMessage);
     handleMessage(receivedMessage, &userData);
   }
-  
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-  //! TESTING MULTIPLE CONNECTIONS, DELETE LATER
-  // sleep(10);
-
 
   // close socket
   close(clientfd);
   printf("Connection closed.\n");
-
-
   exit(0);
 }
