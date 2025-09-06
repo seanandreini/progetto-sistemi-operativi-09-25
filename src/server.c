@@ -663,7 +663,7 @@ int handleMessage(int clientfd, char *stringMessage){
 
       // check if client is authenticated as user
       if(userData.role != USER_ROLE){
-        message.data = cJSON_CreateString("Only an user can create a ticket.\n");
+        message.data = cJSON_CreateString("Only an user can create a ticket.");
         message.action_code = INFO_MESSAGE_CODE;
         char *responseMessage = cJSON_PrintUnformatted(parseMessageToJSON(&message));
         write(clientfd, responseMessage, strlen(responseMessage));
